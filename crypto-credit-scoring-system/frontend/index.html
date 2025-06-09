@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Credit Scoring System</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏦 Crypto Credit Scoring System</h1>
+            <div class="wallet-section">
+                <button id="connectWallet" class="btn btn-primary">Connect Wallet</button>
+                <div id="walletInfo" class="wallet-info hidden">
+                    <div class="wallet-address"></div>
+                    <div class="wallet-balance"></div>
+                    <div class="network-info"></div>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- Navigation Tabs -->
+            <nav class="tab-nav">
+                <button class="tab-btn active" data-tab="profile">Profile</button>
+                <button class="tab-btn" data-tab="collateral">Collateral</button>
+                <button class="tab-btn" data-tab="credit">Credit Score</button>
+                <button class="tab-btn" data-tab="loans">Loan History</button>
+                <button class="tab-btn" data-tab="admin">Admin</button>
+            </nav>
+
+            <!-- Profile Tab -->
+            <div id="profile" class="tab-content active">
+                <div class="card">
+                    <h2>👤 User Profile</h2>
+                    <div id="profileStatus" class="status-box">
+                        <p>Please connect your wallet to view profile</p>
+                    </div>
+                    
+                    <div id="registrationForm" class="form-section hidden">
+                        <h3>Register New User</h3>
+                        <input type="text" id="didInput" placeholder="Enter your DID (e.g., did:example:123)" class="input-field">
+                        <input type="text" id="profileHashInput" placeholder="Profile Hash (0x...)" class="input-field">
+                        <button id="registerBtn" class="btn btn-success">Register</button>
+                    </div>
+
+                    <div id="profileDetails" class="profile-details hidden">
+                        <h3>Profile Information</h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <label>Address:</label>
+                                <span id="profileAddress"></span>
+                            </div>
+                            <div class="info-item">
+                                <label>DID:</label>
+                                <span id="profileDID"></span>
+                            </div>
+                            <div class="info-item">
+                                <label>Verified:</label>
+                                <span id="profileVerified"></span>
+                            </div>
+                            <div class="info-item">
+                                <label>Registration Time:</label>
+                                <span id="profileRegTime"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collateral Tab -->
+            <div id="collateral" class="tab-content">
+                <div class="card">
+                    <h2>💰 Collateral Management</h2>
+                    
+                    <div class="form-section">
+                        <h3>Deposit Collateral</h3>
+                        <select id="tokenSelect" class="input-field">
+                            <option value="">Select Token</option>
+                            <option value="ETH">ETH</option>
+                            <option value="USDC">USDC</option>
+                            <option value="WBTC">WBTC</option>
+                        </select>
+                        <input type="number" id="depositAmount" placeholder="Amount" class="input-field" step="0.001">
+                        <button id="depositBtn" class="btn btn-primary">Deposit Collateral</button>
+                    </div>
+
+                    <div class="collateral-summary">
+                        <h3>Your Collateral</h3>
+                        <div class="summary-stats">
+                            <div class="stat-item">
+                                <label>Total Value:</label>
+                                <span id="totalCollateralValue">$0</span>
+                            </div>
+                            <div class="stat-item">
+                                <label>Collateral Score:</label>
+                                <span id="collateralScore">0</span>
+                            </div>
+                        </div>
+                        <div id="collateralList" class="collateral-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Credit Score Tab -->
+            <div id="credit" class="tab-content">
+                <div class="card">
+                    <h2>📊 Credit Score Analysis</h2>
+                    
+                    <div class="score-section">
+                        <div class="score-display">
+                            <div class="score-circle">
+                                <span id="finalScore">-</span>
+                                <small>Final Score</small>
+                            </div>
+                            <div class="risk-badge">
+                                <span id="riskLevel">Unknown</span>
+                            </div>
+                        </div>
+
+                        <div class="score-breakdown">
+                            <h3>Score Breakdown</h3>
+                            <div class="score-item">
+                                <label>On-Chain Score:</label>
+                                <div class="score-bar">
+                                    <div class="score-fill" id="onChainBar"></div>
+                                    <span id="onChainScore">0</span>
+                                </div>
+                            </div>
+                            <div class="score-item">
+                                <label>Off-Chain Score:</label>
+                                <div class="score-bar">
+                                    <div class="score-fill" id="offChainBar"></div>
+                                    <span id="offChainScore">0</span>
+                                </div>
+                            </div>
+                            <div class="score-item">
+                                <label>Collateral Score:</label>
+                                <div class="score-bar">
+                                    <div class="score-fill" id="collateralScoreBar"></div>
+                                    <span id="collateralScoreValue">0</span>
+                                </div>
+                            </div>
+                            <div class="score-item">
+                                <label>Historical Score:</label>
+                                <div class="score-bar">
+                                    <div class="score-fill" id="historicalBar"></div>
+                                    <span id="historicalScore">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="loan-info">
+                            <h3>Loan Information</h3>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <label>Max Loan Amount:</label>
+                                    <span id="maxLoanAmount">$0</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Interest Rate:</label>
+                                    <span id="interestRate">0%</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Score Valid:</label>
+                                    <span id="scoreValid">No</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="calculateScoreBtn" class="btn btn-primary">Calculate Credit Score</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loan History Tab -->
+            <div id="loans" class="tab-content">
+                <div class="card">
+                    <h2>📜 Loan History</h2>
+                    
+                    <div class="loan-stats">
+                        <div class="stat-item">
+                            <label>Total Loans:</label>
+                            <span id="totalLoans">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <label>Defaulted Loans:</label>
+                            <span id="defaultedLoans">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <label>Repayment Rate:</label>
+                            <span id="repaymentRate">0%</span>
+                        </div>
+                        <div class="stat-item">
+                            <label>Total Repaid:</label>
+                            <span id="totalRepaid">$0</span>
+                        </div>
+                    </div>
+
+                    <div class="loan-history">
+                        <h3>Loan History</h3>
+                        <div id="loanHistoryList" class="loan-list">
+                            <p class="empty-state">No loan history available</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Tab -->
+            <div id="admin" class="tab-content">
+                <div class="card">
+                    <h2>⚙️ Admin Functions</h2>
+                    
+                    <div class="form-section">
+                        <h3>Verify User</h3>
+                        <input type="text" id="verifyUserAddress" placeholder="User Address (0x...)" class="input-field">
+                        <button id="verifyUserBtn" class="btn btn-warning">Verify User</button>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>Update On-Chain Metrics</h3>
+                        <input type="text" id="metricsUserAddress" placeholder="User Address (0x...)" class="input-field">
+                        <input type="number" id="totalTransactions" placeholder="Total Transactions" class="input-field">
+                        <input type="number" id="totalVolume" placeholder="Total Volume (ETH)" class="input-field" step="0.001">
+                        <input type="number" id="accountAge" placeholder="Account Age (days)" class="input-field">
+                        <button id="updateMetricsBtn" class="btn btn-success">Update Metrics</button>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>Add Supported Token</h3>
+                        <input type="text" id="tokenAddress" placeholder="Token Address (0x...)" class="input-field">
+                        <input type="number" id="liquidationThreshold" placeholder="Liquidation Threshold (basis points)" class="input-field">
+                        <button id="addTokenBtn" class="btn btn-primary">Add Token</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay hidden">
+            <div class="spinner"></div>
+            <p>Processing transaction...</p>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toastContainer" class="toast-container"></div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="contracts.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
