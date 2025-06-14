@@ -5,6 +5,7 @@ from src.services.query_service import QueryService
 import asyncio
 import logging
 import json
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -14,10 +15,123 @@ handler.setFormatter(formatter)
 if not logger.handlers:
     logger.addHandler(handler)
 
+class WalletSource(str, Enum):
+    wallets = "wallets"
+    lending_events = "lending_events"
+    liquidations = "liquidations"
 class GraphService:
     def __init__(self, db_manager: DatabaseManager):
         self.db_manager = db_manager
         self.query_service = QueryService(db_manager)
+
+    async def build_graph_from_wallet_batch(
+    self,
+    limit: int = 100,
+    offset: int = 0,
+    source: str = WalletSource.wallets,
+    chain_id: str = "0x1"
+) -> Dict[str, Any]:
+        logger.info(f"Starting build_graph_from_wallet_batch with limit={limit}, offset={limit}, chain_id={chain_id}")
+        try:
+            # Initialize result
+            result = {
+                "status": "success",
+                "message": "Processed wallet batch successfully",
+                "total_processed": 0,
+                "successes": 0,
+                "failures": 0,
+                "errors": []
+            }
+
+            # Step 1: Fetch wallets from MongoDB
+            if source == WalletSource.wallets:
+                db = self.db_manager.get_mongodb_database("knowledge_graph")
+                collection = db["wallets"]
+                projection = {"_id": 0, "address": 1}
+                cursor = collection.find({}, projection).skip(offset).limit(limit)
+            else:
+                if source == WalletSource.lending_events:
+                    db = self.db_manager.get_mongodb_database("ethereum_blockchain_etl")
+                    collection = db["lending_events"]
+                    projection = {"_id": 0, "wallet": 1}
+                    cursor = collection.find({}, projection).skip(offset).limit(limit)
+                else:
+                    if source == WalletSource.liquidations:
+                        db = self.db_manager.get_mongodb_database("knowledge_graph")
+                        collection = db["liquidates"]
+                        projection = {"_id": 0, "debtBuyerWallet": 1}
+                        cursor = collection.find({}, projection).skip(offset).limit(limit)
+                    else:
+                        raise ValueError(f"Invalid source: {source}")
+            
+            # Step 2: Deduplicate wallets by address
+            unique_wallets = []
+            seen_addresses = set()
+            async for doc in cursor:
+                if source == WalletSource.liquidations:
+                    # Extract both wallet addresses
+                    addresses = [doc.get("debtBuyerWallet")] 
+                else:
+                    # Single address field
+                    address = doc.get("address") if source == WalletSource.wallets else doc.get("wallet")
+                    addresses = [address]
+                
+                for address in addresses:
+                    if address and address.lower() not in seen_addresses:
+                        unique_wallets.append(address)
+                        seen_addresses.add(address.lower())
+            
+            logger.info(f"Fetched {len(unique_wallets)} unique wallets after deduplication (from {offset} to {offset + limit})")
+            if not unique_wallets:
+                result["message"] = "No unique wallets found in the specified range"
+                return result
+
+            # Step 3: Process each wallet sequentially
+            for wallet_address in unique_wallets:
+                logger.debug(f"Processing wallet: {wallet_address}")
+                try:
+                    # Call existing build_graph_from_mongodb
+                    graph_result = await self.build_graph_from_mongodb(
+                        wallet_address=wallet_address,
+                        chain_id=chain_id,
+                        limit=20  # Use default limit from build_graph_from_mongodb
+                    )
+                    
+                    if graph_result.get("status") == "success":
+                        result["successes"] += 1
+                        logger.debug(f"Successfully built graph for wallet: {wallet_address}")
+                    else:
+                        result["failures"] += 1
+                        error_msg = f"Failed to build graph for wallet {wallet_address}: {graph_result.get('message')}"
+                        result["errors"].append(error_msg)
+                        logger.error(error_msg)
+                
+                except Exception as e:
+                    result["failures"] += 1
+                    error_msg = f"Error processing wallet {wallet_address}: {str(e)}"
+                    result["errors"].append(error_msg)
+                    logger.error(error_msg, exc_info=True)
+                
+                result["total_processed"] += 1
+
+            # Step 4: Finalize result
+            if result["failures"] > 0:
+                result["status"] = "partial_success"
+                result["message"] = f"Processed {result['total_processed']} wallets with {result['failures']} failures"
+            
+            logger.info(f"Completed batch processing: {result}")
+            return result
+        
+        except Exception as e:
+            logger.error(f"Error in build_graph_from_wallet_batch: {str(e)}", exc_info=True)
+            return {
+                "status": "error",
+                "message": f"Failed to process wallet batch: {str(e)}",
+                "total_processed": 0,
+                "successes": 0,
+                "failures": 0,
+                "errors": [str(e)]
+            }
     
     async def build_graph_from_mongodb(
         self, 

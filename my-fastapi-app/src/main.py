@@ -5,7 +5,7 @@ import uvicorn
 from src.core.database import DatabaseManager
 from src.schemas.responses import *
 from src.services.query_service import QueryService
-from src.services.graph_service import GraphService
+from src.services.graph_service import GraphService, WalletSource
 import asyncio
 
 app = FastAPI(
@@ -132,6 +132,42 @@ async def get_wallet_graph(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch wallet graph data: {error_detail}"
+        )
+@app.get("/build-wallet-batch")
+async def build_wallet_batch(
+    limit: int = Query(100, ge=1, le=1000, description="Number of wallets to process per batch"),
+    offset: int = Query(0, ge=0, description="Starting offset for wallet batch"),
+    source: WalletSource = Query(WalletSource.wallets, description="Source collection for wallets: wallets, lending_transactions, or liquidations"),
+    chain_id: Optional[str] = Query("0x1", description="Blockchain chain ID (e.g., 0x38)")
+):
+    """Build Neo4j graphs for a batch of wallets with pagination and deduplication"""
+    if not db_manager.is_mongodb_connected():
+        raise HTTPException(status_code=503, detail="MongoDB not available")
+    if not db_manager.is_neo4j_connected():
+        raise HTTPException(status_code=503, detail="Neo4j not available")
+    if chain_id and not db_manager.is_cassandra_connected():
+        raise HTTPException(status_code=503, detail="Cassandra not available")
+
+    try:
+        result = await graph_service.build_graph_from_wallet_batch(
+            limit=limit,
+            offset=offset,
+            source=source,
+            chain_id=chain_id
+        )
+        return result
+    except Exception as e:
+        # Log the error with more detail
+        import traceback
+        error_detail = str(e)
+        error_traceback = traceback.format_exc()
+        print(f"Error in build_wallet_batch: {error_detail}")
+        print(error_traceback)
+        
+        # Return a more informative error to the client
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process wallet batch: {error_detail}"
         )
 
 if __name__ == "__main__":

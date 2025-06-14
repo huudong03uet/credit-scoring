@@ -45,7 +45,7 @@ class QueryService:
             wallet_query = {"address": wallet_address} if wallet_address else {}
             logger.debug(f"Step 1: Wallet query: {wallet_query}")
             wallet_projection = {
-                "_id": 0, "address": 1, "chainId": 1, "balanceInUSD": 1, "balanceChangeLogs": 1,
+                "_id": 1, "address": 1, "chainId": 1, "balanceInUSD": 1, "balanceChangeLogs": 1,
                 "depositInUSD": 1, "depositChangeLogs": 1, "borrowInUSD": 1, "borrowChangeLogs": 1,
                 "dailyAllTransactions": 1, "dailyNumberOfTransactions": 1, "dailyTransactionAmounts": 1,
                 "numberOfLiquidation": 1, "totalValueOfLiquidation": 1
@@ -65,7 +65,7 @@ class QueryService:
                 lending_query = {"user": {"$in": wallet_addresses}}
                 logger.debug(f"Step 2: Lending event query: {lending_query}")
                 lending_projection = {
-                    "_id": 0, "wallet": 1, "contract_address": 1, "amount": 1, "block_timestamp": 1, "event_type": 1
+                    "_id": 1, "wallet": 1, "contract_address": 1, "amount": 1, "block_timestamp": 1, "event_type": 1
                 }
                 async for event in lending_collection.find(lending_query, lending_projection).limit(limit):
                     result["lending_events"].append(event)
@@ -82,7 +82,7 @@ class QueryService:
                 contract_query = {"address": {"$in": contract_addresses}}
                 logger.debug(f"Step 3: Contract query: {contract_query}")
                 contract_projection = {
-                    "_id": 0, "address": 1, "tags": 1, "numberOfDailyCalls": 1, "numberOfDailyActiveUsers": 1
+                    "_id": 1, "address": 1, "tags": 1, "numberOfDailyCalls": 1, "numberOfDailyActiveUsers": 1
                 }
                 async for contract in contract_collection.find(contract_query, contract_projection).limit(limit):
                     active_users_count = len(contract.get("numberOfDailyActiveUsers", {}))
@@ -185,7 +185,7 @@ class QueryService:
                     ]
                 }
                 logger.debug(f"Step 8: Liquidation query: {liquidation_query}")
-                liquidation_projection = {"_id": 0, "liquidatedWallet": 1, "debtBuyerWallet": 1, "liquidationLogs": 1}
+                liquidation_projection = {"_id": 1, "liquidatedWallet": 1, "debtBuyerWallet": 1, "liquidationLogs": 1}
                 async for liquidation in liquidation_collection.find(liquidation_query, liquidation_projection).limit(limit):
                     result["liquidations"].append(liquidation)
                 logger.info(f"Step 8: Retrieved {len(result['liquidations'])} liquidation(s)")
