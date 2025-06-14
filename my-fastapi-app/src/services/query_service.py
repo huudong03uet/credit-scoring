@@ -42,8 +42,7 @@ class QueryService:
             # Step 1: Query Wallets
             db = self.db_manager.get_mongodb_database("knowledge_graph")
             wallet_collection = db["wallets"]
-            wallet_query = {"address": wallet_address} if wallet_address else {}
-            logger.debug(f"Step 1: Wallet query: {wallet_query}")
+            wallet_query = {"address": wallet_address} if wallet_address else {"chainId": chain_id}
             wallet_projection = {
                 "_id": 1, "address": 1, "chainId": 1, "balanceInUSD": 1, "balanceChangeLogs": 1,
                 "depositInUSD": 1, "depositChangeLogs": 1, "borrowInUSD": 1, "borrowChangeLogs": 1,
