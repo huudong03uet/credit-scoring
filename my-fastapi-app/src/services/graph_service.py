@@ -511,6 +511,7 @@ class GraphService:
             count = 0
             
             for event in lending_events:
+                event_id = str(event.get("_id", ""))
                 wallet_id = f"{chain_id}_{event['wallet']}"
                 contract_id = f"{chain_id}_{event['contract_address']}"
                 event_type = event.get("event_type", "").upper()
@@ -527,14 +528,16 @@ class GraphService:
                         result = await session.run(f"""
                             MATCH (w:Wallet {{id: $wallet_id}})
                             MATCH (c:Contract {{id: $contract_id}})
-                            MERGE (w)-[r:{edge_label} {{
+                            MERGE (w)-[r:{edge_label} {{_id: $event_id}}]->(c)
+                            SET r += {{
                                 amount: $amount,
                                 timestamp: $timestamp
-                            }}]->(c)
+                            }}
                             RETURN COUNT(*) as created
                         """,
                         wallet_id=wallet_id,
                         contract_id=contract_id,
+                        event_id=event_id,
                         amount=event.get("amount", 0.0),
                         timestamp=event.get("block_timestamp", 0)
                         )
@@ -595,6 +598,7 @@ class GraphService:
             count = 0
             
             for liquidation in liquidations:
+                liquidation_id = str(liquidation.get("_id", ""))
                 liquidated_wallet_id = f"{chain_id}_{liquidation['liquidatedWallet']}"
                 debt_buyer_wallet_id = f"{chain_id}_{liquidation['debtBuyerWallet']}"
                 liquidation_logs = json.dumps(liquidation.get("liquidationLogs", []))
@@ -602,13 +606,15 @@ class GraphService:
                     result = await session.run("""
                         MATCH (w1:Wallet {id: $liquidated_wallet_id})
                         MATCH (w2:Wallet {id: $debt_buyer_wallet_id})
-                        MERGE (w1)-[:LIQUIDATED_BY {
+                        MERGE (w1)-[r:LIQUIDATED_BY {_id: $liquidation_id}]->(w2)
+                        SET r += {
                             liquidationLogs: $liquidationLogs
-                        }]->(w2)
+                        }
                         RETURN COUNT(*) as created
                     """,
                     liquidated_wallet_id=liquidated_wallet_id,
                     debt_buyer_wallet_id=debt_buyer_wallet_id,
+                    liquidation_id=liquidation_id,
                     liquidationLogs=liquidation_logs
                     )
                     record = await result.single()
