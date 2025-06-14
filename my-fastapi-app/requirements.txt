@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+python-dotenv
+pymongo
+psycopg2-binary
+motor
+asyncpg
+requests
+aiohttp
+neo4j

@@ -1,0 +1,67 @@
+# Ignore Python compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore virtual environments (venv, env, .env)
+venv/
+env/
+.venv/
+ENV/
+# If bạn đặt tên venv khác, thêm tên vào đây
+
+# Ignore pip wheel build and dist folders
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Ignore system files and IDE configs
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Ignore environment variable/config files
+.env
+.env.*
+.envrc
+
+# Ignore logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Ignore test & coverage outputs
+htmlcov/
+.coverage
+.tox/
+.cache/
+.pytest_cache/
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore mypy type checking outputs
+.mypy_cache/
+
+# VSCode Python settings
+.vscode/settings.json
+.vscode/*.code-workspace
+
+# pytest result files
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+
+# Ignore celery beat schedule file
+celerybeat-schedule
+
+# SQLite database
+*.sqlite3
+*.db
+
+# Ignore __pypackages__ (PEP 582)
+__pypackages__/
