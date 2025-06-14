@@ -81,13 +81,35 @@ class GraphService:
                         unique_wallets.append(address)
                         seen_addresses.add(address.lower())
             
-            logger.info(f"Fetched {len(unique_wallets)} unique wallets after deduplication (from {offset} to {offset + limit})")
-            if not unique_wallets:
-                result["message"] = "No unique wallets found in the specified range"
-                return result
+            processed_wallets = set()
+            async with self.db_manager.get_neo4j_driver() as neo4j_session:
+                query = """
+                    MATCH (w:Wallet)
+                    RETURN w.address AS wallet_address
+                """
+                session = neo4j_session.session()
+                neo4j_result = await session.run(query)
+                async for record in neo4j_result:
+                    wallet_address = record["wallet_address"]
+                    if wallet_address:
+                        processed_wallets.add(wallet_address.lower())  # Normalize to lowercase
+
+            # Step 4: Filter out already processed wallets
+            unprocessed_wallets = [
+                wallet for wallet in unique_wallets
+                if wallet.lower() not in processed_wallets
+            ]
+
+            # Step 5: Update result
+            result["total_processed"] = len(unique_wallets)
+            result["successes"] = len(unprocessed_wallets)
+            result["failures"] = len(unique_wallets) - len(unprocessed_wallets)
+
+            # Log for debugging
+            logger.info(f"Found {len(unique_wallets)} unique wallets, {len(unprocessed_wallets)} unprocessed wallets")
 
             # Step 3: Process each wallet sequentially
-            for wallet_address in unique_wallets:
+            for wallet_address in unprocessed_wallets:
                 logger.debug(f"Processing wallet: {wallet_address}")
                 try:
                     # Call existing build_graph_from_mongodb

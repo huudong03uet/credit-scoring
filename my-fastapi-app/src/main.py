@@ -135,7 +135,7 @@ async def get_wallet_graph(
         )
 @app.get("/build-wallet-batch")
 async def build_wallet_batch(
-    limit: int = Query(100, ge=1, le=1000, description="Number of wallets to process per batch"),
+    limit: int = Query(100, ge=1, le=10000000, description="Number of wallets to process per batch"),
     offset: int = Query(0, ge=0, description="Starting offset for wallet batch"),
     source: WalletSource = Query(WalletSource.wallets, description="Source collection for wallets: wallets, lending_transactions, or liquidations"),
     chain_id: Optional[str] = Query("0x1", description="Blockchain chain ID (e.g., 0x38)")
