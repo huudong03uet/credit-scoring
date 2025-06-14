@@ -86,17 +86,8 @@ class GraphService:
                 "message": f"Error building graph: {str(e)}"
             }
     
-    async def _clear_graph(self):
-        """Clear all nodes and relationships in Neo4j"""
-        logger.debug("Clearing existing Neo4j graph")
-        driver = self.db_manager.get_neo4j_driver()
-        async with driver.session() as session:
-            await session.run("MATCH (n) DETACH DELETE n")
-        logger.info("Neo4j graph cleared successfully")
-    
     async def _create_project_nodes(self, projects: List[Dict]) -> int:
-        """Create Project nodes"""
-        logger.debug(f"Creating project nodes for {len(projects)} projects")
+        logger.debug(f"Creating or updating project nodes for {len(projects)} projects")
         try:
             driver = self.db_manager.get_neo4j_driver()
             count = 0
@@ -112,8 +103,8 @@ class GraphService:
                 
                 async with driver.session() as session:
                     await session.run("""
-                        CREATE (p:Project {
-                            id: $id,
+                        MERGE (p:Project {id: $id})
+                        SET p += {
                             name: $name,
                             tvl: $tvl,
                             category: $category,
@@ -121,7 +112,7 @@ class GraphService:
                             contractAddresses: $contractAddresses,
                             tokenAddresses: $tokenAddresses,
                             twitterId: $twitterId
-                        })
+                        }
                     """,
                     id=project_id,
                     name=project.get("name", ""),
@@ -134,17 +125,17 @@ class GraphService:
                     )
                 count += 1
             
-            logger.info(f"Created {count} project nodes")
+            logger.info(f"Processed {count} project nodes")
             if count > 0:
                 logger.debug(f"Sample project node: {projects[0]}")
             return count
         except Exception as e:
-            logger.error(f"Error creating project nodes: {e}", exc_info=True)
+            logger.error(f"Error creating or updating project nodes: {e}", exc_info=True)
             return 0
-    
+
     async def _create_wallet_nodes(self, wallets: List[Dict], chain_id: str) -> int:
-        """Create Wallet nodes"""
-        logger.debug(f"Creating wallet nodes for {len(wallets)} wallets")
+        """Create or update Wallet nodes using MERGE to avoid duplicates"""
+        logger.debug(f"Creating or updating wallet nodes for {len(wallets)} wallets")
         try:
             driver = self.db_manager.get_neo4j_driver()
             count = 0
@@ -161,8 +152,8 @@ class GraphService:
                 
                 async with driver.session() as session:
                     await session.run("""
-                        CREATE (w:Wallet {
-                            id: $id,
+                        MERGE (w:Wallet {id: $id})
+                        SET w += {
                             address: $address,
                             chainId: $chainId,
                             balanceInUSD: $balanceInUSD,
@@ -176,7 +167,7 @@ class GraphService:
                             dailyTransactionAmounts: $dailyTransactionAmounts,
                             numberOfLiquidation: $numberOfLiquidation,
                             totalValueOfLiquidation: $totalValueOfLiquidation
-                        })
+                        }
                     """,
                     id=wallet_id,
                     address=wallet.get("address", ""),
@@ -195,17 +186,17 @@ class GraphService:
                     )
                 count += 1
             
-            logger.info(f"Created {count} wallet nodes")
+            logger.info(f"Processed {count} wallet nodes")
             if count > 0:
                 logger.debug(f"Sample wallet node: {wallets[0]}")
             return count
         except Exception as e:
-            logger.error(f"Error creating wallet nodes: {e}", exc_info=True)
+            logger.error(f"Error creating or updating wallet nodes: {e}", exc_info=True)
             return 0
-    
+
     async def _create_contract_nodes(self, contracts: List[Dict], chain_id: str) -> int:
-        """Create Contract nodes"""
-        logger.debug(f"Creating contract nodes for {len(contracts)} contracts")
+        """Create or update Contract nodes using MERGE to avoid duplicates"""
+        logger.debug(f"Creating or updating contract nodes for {len(contracts)} contracts")
         try:
             driver = self.db_manager.get_neo4j_driver()
             count = 0
@@ -214,14 +205,14 @@ class GraphService:
                 contract_id = f"{chain_id}_{contract['address']}"
                 async with driver.session() as session:
                     await session.run("""
-                        CREATE (c:Contract {
-                            id: $id,
+                        MERGE (c:Contract {id: $id})
+                        SET c += {
                             address: $address,
                             chainId: $chainId,
                             tags: $tags,
                             numberOfDailyCalls: $numberOfDailyCalls,
                             numberOfDailyActiveUsers: $numberOfDailyActiveUsers
-                        })
+                        }
                     """,
                     id=contract_id,
                     address=contract.get("address", ""),
@@ -232,17 +223,17 @@ class GraphService:
                     )
                 count += 1
             
-            logger.info(f"Created {count} contract nodes")
+            logger.info(f"Processed {count} contract nodes")
             if count > 0:
                 logger.debug(f"Sample contract node: {contracts[0]}")
             return count
         except Exception as e:
-            logger.error(f"Error creating contract nodes: {e}", exc_info=True)
+            logger.error(f"Error creating or updating contract nodes: {e}", exc_info=True)
             return 0
-    
+
     async def _create_token_nodes(self, contracts: List[Dict], chain_id: str) -> int:
-        """Create Token nodes from contracts with tag 'token'"""
-        logger.debug(f"Creating token nodes from {len(contracts)} contracts")
+        """Create or update Token nodes from contracts with tag 'token' using MERGE to avoid duplicates"""
+        logger.debug(f"Creating or updating token nodes from {len(contracts)} contracts")
         try:
             driver = self.db_manager.get_neo4j_driver()
             count = 0
@@ -254,8 +245,8 @@ class GraphService:
                     price_change_logs = json.dumps(contract.get("priceChangeLogs", {}))
                     async with driver.session() as session:
                         await session.run("""
-                            CREATE (t:Token {
-                                id: $id,
+                            MERGE (t:Token {id: $id})
+                            SET t += {
                                 address: $address,
                                 chainId: $chainId,
                                 symbol: $symbol,
@@ -264,7 +255,7 @@ class GraphService:
                                 marketCap: $marketCap,
                                 tradingVolume: $tradingVolume,
                                 priceChangeLogs: $priceChangeLogs
-                            })
+                            }
                         """,
                         id=token_id,
                         address=contract.get("address", ""),
@@ -278,17 +269,17 @@ class GraphService:
                         )
                     count += 1
             
-            logger.info(f"Created {count} token nodes")
+            logger.info(f"Processed {count} token nodes")
             if count > 0:
                 logger.debug(f"Sample token node: {contracts[0]}")
             return count
         except Exception as e:
-            logger.error(f"Error creating token nodes: {e}", exc_info=True)
+            logger.error(f"Error creating or updating token nodes: {e}", exc_info=True)
             return 0
-    
+
     async def _create_tweet_user_nodes(self, twitter_users: List[Dict]) -> int:
-        """Create TweetUser nodes"""
-        logger.debug(f"Creating tweet user nodes for {len(twitter_users)} users")
+        """Create or update TweetUser nodes using MERGE to avoid duplicates"""
+        logger.debug(f"Creating or updating tweet user nodes for {len(twitter_users)} users")
         try:
             driver = self.db_manager.get_neo4j_driver()
             count = 0
@@ -297,15 +288,15 @@ class GraphService:
                 user_id = str(user["_id"])
                 async with driver.session() as session:
                     await session.run("""
-                        CREATE (u:TweetUser {
-                            id: $id,
+                        MERGE (u:TweetUser {id: $id})
+                        SET u += {
                             userName: $userName,
                             followersCount: $followersCount,
                             favouritesCount: $favouritesCount,
                             friendsCount: $friendsCount,
                             statusesCount: $statusesCount,
                             verified: $verified
-                        })
+                        }
                     """,
                     id=user_id,
                     userName=user.get("userName", ""),
@@ -317,17 +308,17 @@ class GraphService:
                     )
                 count += 1
             
-            logger.info(f"Created {count} tweet user nodes")
+            logger.info(f"Processed {count} tweet user nodes")
             if count > 0:
                 logger.debug(f"Sample tweet user node: {twitter_users[0]}")
             return count
         except Exception as e:
-            logger.error(f"Error creating tweet user nodes: {e}", exc_info=True)
+            logger.error(f"Error creating or updating tweet user nodes: {e}", exc_info=True)
             return 0
-    
+
     async def _create_tweet_nodes(self, tweets: List[Dict]) -> int:
-        """Create Tweet nodes"""
-        logger.debug(f"Creating tweet nodes for {len(tweets)} tweets")
+        """Create or update Tweet nodes using MERGE to avoid duplicates"""
+        logger.debug(f"Creating or updating tweet nodes for {len(tweets)} tweets")
         try:
             driver = self.db_manager.get_neo4j_driver()
             count = 0
@@ -336,15 +327,15 @@ class GraphService:
                 tweet_id = str(tweet["id"])
                 async with driver.session() as session:
                     await session.run("""
-                        CREATE (t:Tweet {
-                            id: $id,
+                        MERGE (t:Tweet {id: $id})
+                        SET t += {
                             authorName: $authorName,
                             timestamp: $timestamp,
                             likes: $likes,
                             retweetCounts: $retweetCounts,
                             replyCounts: $replyCounts,
                             hashTags: $hashTags
-                        })
+                        }
                     """,
                     id=tweet_id,
                     authorName=tweet.get("authorName", ""),
@@ -356,17 +347,17 @@ class GraphService:
                     )
                 count += 1
             
-            logger.info(f"Created {count} tweet nodes")
+            logger.info(f"Processed {count} tweet nodes")
             if count > 0:
                 logger.debug(f"Sample tweet node: {tweets[0]}")
             return count
         except Exception as e:
-            logger.error(f"Error creating tweet nodes: {e}", exc_info=True)
+            logger.error(f"Error creating or updating tweet nodes: {e}", exc_info=True)
             return 0
-    
+
     async def _create_hashtag_nodes(self, tweets: List[Dict]) -> int:
-        """Create Hashtag nodes from tweet hashtags"""
-        logger.debug(f"Creating hashtag nodes from {len(tweets)} tweets")
+        """Create or update Hashtag nodes from tweet hashtags using MERGE to avoid duplicates"""
+        logger.debug(f"Creating or updating hashtag nodes from {len(tweets)} tweets")
         try:
             driver = self.db_manager.get_neo4j_driver()
             count = 0
@@ -380,22 +371,22 @@ class GraphService:
             for hashtag in hashtags_set:
                 async with driver.session() as session:
                     await session.run("""
-                        CREATE (h:Hashtag {
-                            id: $id,
+                        MERGE (h:Hashtag {id: $id})
+                        SET h += {
                             tag: $tag
-                        })
+                        }
                     """,
                     id=hashtag,
                     tag=hashtag
                     )
                 count += 1
             
-            logger.info(f"Created {count} hashtag nodes")
+            logger.info(f"Processed {count} hashtag nodes")
             if count > 0:
                 logger.debug(f"Sample hashtag node: {list(hashtags_set)[0]}")
             return count
         except Exception as e:
-            logger.error(f"Error creating hashtag nodes: {e}", exc_info=True)
+            logger.error(f"Error creating or updating hashtag nodes: {e}", exc_info=True)
             return 0
     
     async def _create_lending_event_relationships(self, lending_events: List[Dict], chain_id: str) -> int:
