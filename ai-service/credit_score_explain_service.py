@@ -40,7 +40,7 @@ class CreditScoreExplainService:
                 
             async with self.driver.session() as session:
                 result = await session.run(
-                    "MATCH (w:Wallet {address: $wallet_id}) RETURN w.score AS score",
+                    "MATCH (w:Wallet {id: $wallet_id}) RETURN w.credit_score AS score",
                     wallet_id=request.wallet_id
                 )
                 # nếu không tìm thấy score, trả về 700
@@ -53,12 +53,12 @@ class CreditScoreExplainService:
 
 
             # Kiểm tra credit score có hợp lệ không
-            if not (300 <= request.credit_score <= 850):
+            if not (300 <= score <= 850):
                 raise ValueError("Credit score must be between 300 and 850.")
             if not nodes or not edges:
                 raise ValueError("Nodes and edges data must not be empty.")
             # 1. Kiểm tra credit score có hợp lệ không
-            if not (300 <= request.credit_score <= 850):
+            if not (300 <= score <= 850):
                 raise ValueError("Credit score must be between 300 and 850.")
             
             
@@ -74,6 +74,7 @@ class CreditScoreExplainService:
             # 3. Gọi LLM
             response = await self.chain.ainvoke(llm_input)
             content = response.content if hasattr(response, "content") else str(response)
+            print(f"LLM raw response: {content}")
 
             # 4. Parse JSON output
             parsed = clean_and_parse_json(content)

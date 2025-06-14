@@ -1,11 +1,11 @@
 from neo4j import GraphDatabase
-uri = "neo4j+s://470cde68.databases.neo4j.io"
-user = "neo4j"
-password = "Z456d17M4q4EGQju5_xLT8vS4G-bb21D67SkjEV256M"
-
 class WalletFeatureExporter:
-    def __init__(self, uri, user, password):
-        self.driver = GraphDatabase.driver(uri, auth=(user, password))
+    def __init__(self):
+        from llm_config import settings
+        self.driver = GraphDatabase.driver(
+            settings.NEO4J_URI, auth=(settings.NEO4J_USERNAME, settings.NEO4J_PASSWORD)
+        )
+        
 
     def close(self):
         self.driver.close()
@@ -14,13 +14,13 @@ class WalletFeatureExporter:
         queries = [
             # DEPOSIT
             """
-            MATCH (w:Wallet)-[r:DEPOSIT]->()
+            MATCH (w:Wallet)-[r:DEPOSITED]->()
             WITH w, count(r) AS num_deposit, sum(r.amount) AS total_deposit
             SET w.num_deposit = num_deposit, w.total_deposit = total_deposit
             """,
             # BORROW
             """
-            MATCH (w:Wallet)-[r:BORROW]->()
+            MATCH (w:Wallet)-[r:BORROWED]->()
             WITH w, count(r) AS num_borrow, sum(r.amount) AS total_borrow
             SET w.num_borrow = num_borrow, w.total_borrow = total_borrow
             """,
@@ -32,21 +32,21 @@ class WalletFeatureExporter:
             """,
             # WITHDRAW
             """
-            MATCH (w:Wallet)-[r:WITHDRAW]->()
+            MATCH (w:Wallet)-[r:WITHDREW]->()
             WITH w, count(r) AS num_withdraw, sum(r.amount) AS total_withdraw
             SET w.num_withdraw = num_withdraw, w.total_withdraw = total_withdraw
             """,
-            # TRANSFERS (outgoing and incoming)
-            """
-            MATCH (w:Wallet)-[r:TRANSFERRED_TO]->()
-            WITH w, count(r) AS num_outgoing, sum(r.value) AS total_outgoing
-            SET w.num_outgoing = num_outgoing, w.total_outgoing = total_outgoing
-            """,
-            """
-            MATCH ()-[r:TRANSFERRED_TO]->(w:Wallet)
-            WITH w, count(r) AS num_incoming, sum(r.value) AS total_incoming
-            SET w.num_incoming = num_incoming, w.total_incoming = total_incoming
-            """,
+            # # TRANSFERS (outgoing and incoming)
+            # """
+            # MATCH (w:Wallet)-[r:TRANSFERRED_TO]->()
+            # WITH w, count(r) AS num_outgoing, sum(r.value) AS total_outgoing
+            # SET w.num_outgoing = num_outgoing, w.total_outgoing = total_outgoing
+            # """,
+            # """
+            # MATCH ()-[r:TRANSFERRED_TO]->(w:Wallet)
+            # WITH w, count(r) AS num_incoming, sum(r.value) AS total_incoming
+            # SET w.num_incoming = num_incoming, w.total_incoming = total_incoming
+            # """,
             # LIQUIDATIONS
             """
             MATCH (w:Wallet)<-[r:LIQUIDATED_BY]-()
@@ -60,24 +60,24 @@ class WalletFeatureExporter:
             """,
             # CONTRACTS and PROJECTS
             """
-            MATCH (w:Wallet)-[:DEPOSIT|BORROW|REPAID|WITHDRAW]->(c:Contract)
+            MATCH (w:Wallet)-[:DEPOSITED|BORROWED|REPAID|WITHDREW]->(c:Contract)
             WITH w, count(DISTINCT c) AS num_contracts
             SET w.num_contracts = num_contracts
             """,
             """
-            MATCH (w:Wallet)-[:DEPOSIT|BORROW|REPAID|WITHDRAW]->(:Contract)-[:PART_OF]->(p:Project)
+            MATCH (w:Wallet)-[:DEPOSITED|BORROWED|REPAID|WITHDREW]->(:Contract)-[:PART_OF]->(p:Project)
             WITH w, count(DISTINCT p) AS num_projects
             SET w.num_projects = num_projects
             """,
             # TWEET METRICS
             """
-            MATCH (w:Wallet)-[:DEPOSIT|BORROW|REPAID|WITHDRAW]->(:Contract)-[:PART_OF]->(:Project)-[:HAS_ACCOUNT]->(:TweetUser)-[:TWEETED]->(t:Tweet)
+            MATCH (w:Wallet)-[:DEPOSITED|BORROWED|REPAID|WITHDREW]->(:Contract)-[:PART_OF]->(:Project)-[:HAS_ACCOUNT]->(:TweetUser)-[:TWEETED]->(t:Tweet)
             WITH w, count(t) AS num_tweets, avg(t.likes) AS avg_likes, avg(t.retweetCounts) AS avg_retweets
             SET w.num_tweets = num_tweets, w.avg_likes = avg_likes, w.avg_retweets = avg_retweets
             """,
             # HASHTAG METRICS
             """
-            MATCH (w:Wallet)-[:DEPOSIT|BORROW|REPAID|WITHDRAW]->(:Contract)-[:PART_OF]->(:Project)-[:HAS_ACCOUNT]->(:TweetUser)-[:TWEETED]->(:Tweet)-[:MENTIONS]->(h:Hashtag)
+            MATCH (w:Wallet)-[:DEPOSITED|BORROWED|REPAID|WITHDREW]->(:Contract)-[:PART_OF]->(:Project)-[:HAS_ACCOUNT]->(:TweetUser)-[:TWEETED]->(:Tweet)-[:MENTIONS]->(h:Hashtag)
             WITH w, count(DISTINCT h) AS num_hashtags
             SET w.num_hashtags = num_hashtags
             """
@@ -93,7 +93,7 @@ class WalletFeatureExporter:
         CALL apoc.export.csv.query(
         "MATCH (w:Wallet)
         RETURN 
-            w.address AS address,
+            w.id AS id,
             coalesce(w.num_deposit, 0) AS num_deposit,
             coalesce(w.total_deposit, 0.0) AS total_deposit,
             coalesce(w.num_borrow, 0) AS num_borrow,
@@ -102,10 +102,6 @@ class WalletFeatureExporter:
             coalesce(w.total_repay, 0.0) AS total_repay,
             coalesce(w.num_withdraw, 0) AS num_withdraw,
             coalesce(w.total_withdraw, 0.0) AS total_withdraw,
-            coalesce(w.num_outgoing, 0) AS num_outgoing,
-            coalesce(w.total_outgoing, 0.0) AS total_outgoing,
-            coalesce(w.num_incoming, 0) AS num_incoming,
-            coalesce(w.total_incoming, 0.0) AS total_incoming,
             coalesce(w.num_liquidated, 0) AS num_liquidated,
             coalesce(w.total_liquidated, 0.0) AS total_liquidated,
             coalesce(w.num_liquidating, 0) AS num_liquidating,
@@ -133,7 +129,7 @@ class WalletFeatureExporter:
             print(f"Exported to {filename}")
 
 if __name__ == "__main__":
-    exporter = WalletFeatureExporter(uri, user, password)
+    exporter = WalletFeatureExporter()
     try:
         exporter.update_wallet_features()
         exporter.export_to_csv("wallet_features.csv")
