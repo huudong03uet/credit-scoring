@@ -23,7 +23,9 @@ class QueryService:
         chain_id: str = "0x1",
         limit: int = 1  # Default limit to 1 record per collection
     ) -> Dict[str, Any]:
+        chain_id = chain_id or "0x1"
         """Fetch one record from each collection to link Wallet, Lending Events, Contracts, Projects, Social, Twitter"""
+        logger.info(f"Fetching graph data for wallet_address={wallet_address}, chain_id={chain_id}, limit={limit}")
         try:
             result = {
                 "wallets": [],
@@ -50,151 +52,151 @@ class QueryService:
             async for wallet in wallet_collection.find(wallet_query, wallet_projection).limit(limit):
                 result["wallets"].append(wallet)
             logger.info(f"Step 1: Retrieved {len(result['wallets'])} wallet(s)")
+            if result["wallets"]:
+                logger.debug(f"Sample wallet: {result['wallets'][0]}")
+            else:
+                logger.debug("No wallets retrieved")
 
             # Step 2: Query Lending Events
-            lending_collection = self.db_manager.get_mongodb_database("blockchain_etl")["lending_events"]
             wallet_addresses = [wallet["address"] for wallet in result["wallets"]]
-            lending_query = {"wallet": {"$in": wallet_addresses}} if wallet_addresses else {}
-            lending_projection = {
-                "_id": 0, "wallet": 1, "contract_address": 1, "amount": 1, "block_timestamp": 1, "event_type": 1
-            }
-            async for event in lending_collection.find(lending_query, lending_projection).limit(limit):
-                result["lending_events"].append(event)
-            logger.info(f"Step 2: Retrieved {len(result['lending_events'])} lending event(s)")
+            if wallet_addresses:
+                lending_collection = self.db_manager.get_mongodb_database("ethereum_blockchain_etl")["lending_events"]
+                lending_query = {"user": {"$in": wallet_addresses}}
+                logger.debug(f"Step 2: Lending event query: {lending_query}")
+                lending_projection = {
+                    "_id": 0, "wallet": 1, "contract_address": 1, "amount": 1, "block_timestamp": 1, "event_type": 1
+                }
+                async for event in lending_collection.find(lending_query, lending_projection).limit(limit):
+                    result["lending_events"].append(event)
+                logger.info(f"Step 2: Retrieved {len(result['lending_events'])} lending event(s)")
+                if result["lending_events"]:
+                    logger.debug(f"Sample lending event: {result['lending_events'][0]}")
+            else:
+                logger.debug("Step 2: Skipped lending events query (no wallet addresses)")
 
             # Step 3: Query Contracts
-            contract_addresses = [event["contract_address"] for event in result["lending_events"]]
-            contract_collection = db["smart_contracts"]
-            contract_query = {"address": {"$in": contract_addresses}} if contract_addresses else {}
-            contract_projection = {
-                "_id": 0, "address": 1, "tags": 1, "numberOfDailyCalls": 1, "numberOfDailyActiveUsers": 1
-            }
-            async for contract in contract_collection.find(contract_query, contract_projection).limit(limit):
-                active_users_count = len(contract["numberOfDailyActiveUsers"]) if contract.get("numberOfDailyActiveUsers") else 0
-                daily_calls_count = len(contract["numberOfDailyCalls"]) if contract.get("numberOfDailyCalls") else 0
-                logger.debug(f"Step 3: Counted {active_users_count} keys in numberOfDailyActiveUsers and {daily_calls_count} keys in numberOfDailyCalls for contract {contract['address']}")
-                contract["numberOfDailyActiveUsers"] = active_users_count
-                contract["numberOfDailyCalls"] = daily_calls_count
-                result["contracts"].append(contract)
-            logger.info(f"Step 3: Retrieved {len(result['contracts'])} contract(s)")
+            contract_addresses = list(set(event["contract_address"] for event in result["lending_events"]))
+            if contract_addresses:
+                contract_collection = db["smart_contracts"]
+                contract_query = {"address": {"$in": contract_addresses}}
+                logger.debug(f"Step 3: Contract query: {contract_query}")
+                contract_projection = {
+                    "_id": 0, "address": 1, "tags": 1, "numberOfDailyCalls": 1, "numberOfDailyActiveUsers": 1
+                }
+                async for contract in contract_collection.find(contract_query, contract_projection).limit(limit):
+                    active_users_count = len(contract.get("numberOfDailyActiveUsers", {}))
+                    daily_calls_count = len(contract.get("numberOfDailyCalls", {}))
+                    logger.debug(f"Step 3: Counted {active_users_count} keys in numberOfDailyActiveUsers and {daily_calls_count} keys in numberOfDailyCalls for contract {contract['address']}")
+                    contract["numberOfDailyActiveUsers"] = active_users_count
+                    contract["numberOfDailyCalls"] = daily_calls_count
+                    result["contracts"].append(contract)
+                logger.info(f"Step 3: Retrieved {len(result['contracts'])} contract(s)")
+                if result["contracts"]:
+                    logger.debug(f"Sample contract: {result['contracts'][0]}")
+            else:
+                logger.debug("Step 3: Skipped contracts query (no contract addresses)")
 
             # Step 4: Query Projects
-            project_collection = db["projects"]
-            project_query = {}
-            if chain_id and contract_addresses:
+            if contract_addresses:
+                project_collection = db["projects"]
                 project_query = {
                     "$or": [{f"contractAddresses.{chain_id}_{addr}": {"$exists": True}} for addr in contract_addresses]
                 }
-            project_projection = {
-                "_id": 1, "name": 1, "tvl": 1, "category": 1, "deployedChains": 1,
-                "contractAddresses": 1, "tokenAddresses": 1, "socialAccounts.twitter.id": 1
-            }
-            async for project in project_collection.find(project_query, project_projection).limit(limit):
-                result["projects"].append(project)
-            logger.info(f"Step 4: Retrieved {len(result['projects'])} project(s)")
+                logger.debug(f"Step 4: Project query: {project_query}")
+                project_projection = {
+                    "_id": 1, "name": 1, "tvl": 1, "category": 1, "deployedChains": 1,
+                    "contractAddresses": 1, "tokenAddresses": 1, "socialAccounts.twitter.id": 1
+                }
+                async for project in project_collection.find(project_query, project_projection).limit(limit):
+                    result["projects"].append(project)
+                logger.info(f"Step 4: Retrieved {len(result['projects'])} project(s)")
+                if result["projects"]:
+                    logger.debug(f"Sample project: {result['projects'][0]}")
+            else:
+                logger.debug("Step 4: Skipped projects query (no contract addresses or chain_id)")
 
             # Step 5: Query Project Social
             project_ids = [project["_id"] for project in result["projects"]]
-            social_collection = self.db_manager.get_mongodb_database("cdp_db")["projects_social_media"]
-            social_projection = {"_id": 1, "twitter.id": 1}
-            async for social in social_collection.find({"_id": {"$in": project_ids}}, social_projection).limit(limit):
-                result["project_social"].append(social)
-            logger.info(f"Step 5: Retrieved {len(result['project_social'])} project social record(s)")
+            if project_ids:
+                social_collection = self.db_manager.get_mongodb_database("cdp_db")["projects_social_media"]
+                social_query = {"_id": {"$in": project_ids}}
+                logger.debug(f"Step 5: Social query: {social_query}")
+                social_projection = {"_id": 1, "twitter.id": 1}
+                async for social in social_collection.find(social_query, social_projection).limit(limit):
+                    result["project_social"].append(social)
+                logger.info(f"Step 5: Retrieved {len(result['project_social'])} project social record(s)")
+                if result["project_social"]:
+                    logger.debug(f"Sample project social: {result['project_social'][0]}")
+            else:
+                logger.debug("Step 5: Skipped project social query (no project IDs)")
 
             # Step 6: Query Twitter Users
-            twitter_ids = [social["twitter"]["id"] for social in result["project_social"] if social.get("twitter")]
-            twitter_user_collection = self.db_manager.get_mongodb_database("cdp_db")["twitter_users"]
-            twitter_query = {"userName": {"$in": twitter_ids}} if twitter_ids else {}
-            twitter_user_projection = {
-                "_id": 1, "userName": 1, "followersCount": 1, "favouritesCount": 1,
-                "friendsCount": 1, "statusesCount": 1, "verified": 1
-            }
-            async for user in twitter_user_collection.find(twitter_query, twitter_user_projection).limit(limit):
-                result["twitter_users"].append(user)
-            logger.info(f"Step 6: Retrieved {len(result['twitter_users'])} Twitter user(s)")
+            twitter_ids = [social["twitter"]["id"] for social in result["project_social"] if social.get("twitter", {}).get("id")]
+            if twitter_ids:
+                twitter_user_collection = self.db_manager.get_mongodb_database("cdp_db")["twitter_users"]
+                twitter_query = {"userName": {"$in": twitter_ids}}
+                logger.debug(f"Step 6: Twitter user query: {twitter_query}")
+                twitter_user_projection = {
+                    "_id": 1, "userName": 1, "followersCount": 1, "favouritesCount": 1,
+                    "friendsCount": 1, "statusesCount": 1, "verified": 1
+                }
+                async for user in twitter_user_collection.find(twitter_query, twitter_user_projection).limit(limit):
+                    result["twitter_users"].append(user)
+                logger.info(f"Step 6: Retrieved {len(result['twitter_users'])} Twitter user(s)")
+                if result["twitter_users"]:
+                    logger.debug(f"Sample Twitter user: {result['twitter_users'][0]}")
+            else:
+                logger.debug("Step 6: Skipped Twitter users query (no Twitter IDs)")
 
             # Step 7: Query Tweets
-            tweet_collection = self.db_manager.get_mongodb_database("cdp_db")["tweets"]
-            tweet_query = {"authorName": {"$in": twitter_ids}} if twitter_ids else {}
-            tweet_projection = {
-                "_id": 1, "authorName": 1, "timestamp": 1, "likes": 1,
-                "retweetCounts": 1, "replyCounts": 1, "hashTags": 1
-            }
-            async for tweet in tweet_collection.find(tweet_query, tweet_projection).limit(limit):
-                tweet_dict = {}
-                for key, value in tweet.items():
-                    if key == "_id":
-                        tweet_dict["id"] = str(value)  # Convert ObjectId or string to string
-                    else:
-                        tweet_dict[key] = value
-                result["tweets"].append(tweet_dict)
-            logger.info(f"Step 7: Retrieved {len(result['tweets'])} tweet(s)")
+            if twitter_ids:
+                tweet_collection = self.db_manager.get_mongodb_database("cdp_db")["tweets"]
+                tweet_query = {"authorName": {"$in": twitter_ids}}
+                logger.debug(f"Step 7: Tweet query: {tweet_query}")
+                tweet_projection = {
+                    "_id": 1, "authorName": 1, "timestamp": 1, "likes": 1,
+                    "retweetCounts": 1, "replyCounts": 1, "hashTags": 1
+                }
+                async for tweet in tweet_collection.find(tweet_query, tweet_projection).limit(limit):
+                    tweet_dict = {
+                        "id": str(tweet["_id"]),  # Convert ObjectId to string
+                        "authorName": tweet.get("authorName"),
+                        "timestamp": tweet.get("timestamp"),
+                        "likes": tweet.get("likes"),
+                        "retweetCounts": tweet.get("retweetCounts"),
+                        "replyCounts": tweet.get("replyCounts"),
+                        "hashTags": tweet.get("hashTags")
+                    }
+                    result["tweets"].append(tweet_dict)
+                logger.info(f"Step 7: Retrieved {len(result['tweets'])} tweet(s)")
+                if result["tweets"]:
+                    logger.debug(f"Sample tweet: {result['tweets'][0]}")
+            else:
+                logger.debug("Step 7: Skipped tweets query (no Twitter IDs)")
 
-            # # Step 8: Query Token Transfers (Cassandra)
-            # logger.debug("Step 8: Querying token transfers")
-            # if wallet_addresses:
-            #     cassandra_session = self.db_manager.get_cassandra_session()
+            # Step 8: Query Liquidations
+            if wallet_addresses:
+                liquidation_collection = db["liquidates"]
+                liquidation_query = {
+                    "$or": [
+                        {"liquidatedWallet": {"$in": wallet_addresses}},
+                        {"debtBuyerWallet": {"$in": wallet_addresses}}
+                    ]
+                }
+                logger.debug(f"Step 8: Liquidation query: {liquidation_query}")
+                liquidation_projection = {"_id": 0, "liquidatedWallet": 1, "debtBuyerWallet": 1, "liquidationLogs": 1}
+                async for liquidation in liquidation_collection.find(liquidation_query, liquidation_projection).limit(limit):
+                    result["liquidations"].append(liquidation)
+                logger.info(f"Step 8: Retrieved {len(result['liquidations'])} liquidation(s)")
+                if result["liquidations"]:
+                    logger.debug(f"Sample liquidation: {result['liquidations'][0]}")
+            else:
+                logger.debug("Step 8: Skipped liquidations query (no wallet addresses)")
 
-            #     # Query transfers theo from_address
-            #     token_transfer_query_from = """
-            #         SELECT block_number, from_address, to_address, value
-            #         FROM token_transfer
-            #         WHERE from_address IN ?
-            #         LIMIT %s
-            #         ALLOW FILTERING
-            #     """
-            #     prepared_from = cassandra_session.prepare(
-            #         token_transfer_query_from % ( limit)
-            #     )
-            #     rows_from = cassandra_session.execute(
-            #         prepared_from, [tuple(wallet_addresses)]
-            #     )
-
-            #     # Query transfers theo to_address
-            #     token_transfer_query_to = """
-            #         SELECT block_number, from_address, to_address, value
-            #         FROM token_transfer
-            #         WHERE to_address IN ?
-            #         LIMIT %s
-            #         ALLOW FILTERING
-            #     """
-            #     prepared_to = cassandra_session.prepare(
-            #         token_transfer_query_to % (limit)
-            #     )
-            #     rows_to = cassandra_session.execute(
-            #         prepared_to, [tuple(wallet_addresses)]
-            #     )
-
-            #     # Gộp và khử trùng
-            #     unique = {
-            #         (r.block_number, r.from_address, r.to_address, r.value): r
-            #         for r in list(rows_from) + list(rows_to)
-            #     }
-            #     result["token_transfers"] = [r._asdict() for r in unique.values()]
-
-            #     logger.info(f"Step 8: Retrieved {len(result['token_transfers'])} token transfer(s)")
-            #     if result["token_transfers"]:
-            #         logger.debug(f"Step 8: Sample token transfer: {result['token_transfers'][0]}")
-            # else:
-            #     logger.info("Step 8: Skipped token transfers query (no chain_id or wallet_addresses)")
-
-            # Step 9: Query Liquidations
-            liquidation_collection = db["liquidates"]
-            liquidation_query = {
-                "$or": [
-                    {"liquidatedWallet": {"$in": wallet_addresses}},
-                    {"debtBuyerWallet": {"$in": wallet_addresses}}
-                ]
-            } if wallet_addresses else {}
-            liquidation_projection = {"_id": 0, "liquidatedWallet": 1, "debtBuyerWallet": 1, "liquidationLogs": 1}
-            async for liquidation in liquidation_collection.find(liquidation_query, liquidation_projection).limit(limit):
-                result["liquidations"].append(liquidation)
-            logger.info(f"Step 9: Retrieved {len(result['liquidations'])} liquidation(s)")
-
+            logger.info("Graph data fetched successfully")
             return result
         except Exception as e:
-            logger.error(f"Error fetching wallet graph data: {e}")
-            # Return result with empty lists to satisfy Pydantic model
+            logger.error(f"Error fetching wallet graph data: {str(e)}", exc_info=True)
             return {
                 "wallets": [],
                 "lending_events": [],
@@ -206,4 +208,3 @@ class QueryService:
                 "token_transfers": [],
                 "liquidations": []
             }
-    

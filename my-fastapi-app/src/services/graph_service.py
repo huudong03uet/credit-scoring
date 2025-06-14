@@ -30,9 +30,7 @@ class GraphService:
         try:
             driver = self.db_manager.get_neo4j_driver()
             
-            # Clear existing graph
-            await self._clear_graph()
-            
+            chain_id = chain_id or "0x1"
             # Fetch data from QueryService
             data = await self.query_service.get_wallet_graph_data(
                 wallet_address=wallet_address,
@@ -88,34 +86,25 @@ class GraphService:
                 "message": f"Error building graph: {str(e)}"
             }
     
-    async def _clear_graph(self):
-        """Clear all nodes and relationships in Neo4j"""
-        logger.debug("Clearing existing Neo4j graph")
-        driver = self.db_manager.get_neo4j_driver()
-        async with driver.session() as session:
-            await session.run("MATCH (n) DETACH DELETE n")
-        logger.info("Neo4j graph cleared successfully")
-    
     async def _create_project_nodes(self, projects: List[Dict]) -> int:
-        """Create Project nodes"""
-        logger.debug(f"Creating project nodes for {len(projects)} projects")
+        logger.debug(f"Creating or updating project nodes for {len(projects)} projects")
         try:
             driver = self.db_manager.get_neo4j_driver()
             count = 0
             
             for project in projects:
                 project_id = str(project["_id"])
-                # Serialize dictionary properties to JSON strings
-                contract_addresses = json.dumps(project.get("contractAddresses", {}))
-                token_addresses = json.dumps(project.get("tokenAddresses", {}))
+                # Ensure contractAddresses and tokenAddresses are dictionaries
+                contract_addresses = project.get("contractAddresses", {})
+                token_addresses = project.get("tokenAddresses", {})
                 deployed_chains = project.get("deployedChains", [])  # Ensure it's a list
                 if not isinstance(deployed_chains, list):
                     deployed_chains = [deployed_chains] if deployed_chains else []
                 
                 async with driver.session() as session:
                     await session.run("""
-                        CREATE (p:Project {
-                            id: $id,
+                        MERGE (p:Project {id: $id})
+                        SET p += {
                             name: $name,
                             tvl: $tvl,
                             category: $category,
@@ -123,30 +112,30 @@ class GraphService:
                             contractAddresses: $contractAddresses,
                             tokenAddresses: $tokenAddresses,
                             twitterId: $twitterId
-                        })
+                        }
                     """,
                     id=project_id,
                     name=project.get("name", ""),
                     tvl=project.get("tvl", 0.0),
                     category=project.get("category", ""),
                     deployedChains=deployed_chains,
-                    contractAddresses=contract_addresses,
-                    tokenAddresses=token_addresses,
+                    contractAddresses=json.dumps(contract_addresses),  # Serialize to string
+                    tokenAddresses=json.dumps(token_addresses),  # Serialize to string
                     twitterId=project.get("socialAccounts", {}).get("twitter", {}).get("id", "")
                     )
                 count += 1
             
-            logger.info(f"Created {count} project nodes")
+            logger.info(f"Processed {count} project nodes")
             if count > 0:
                 logger.debug(f"Sample project node: {projects[0]}")
             return count
         except Exception as e:
-            logger.error(f"Error creating project nodes: {e}", exc_info=True)
+            logger.error(f"Error creating or updating project nodes: {e}", exc_info=True)
             return 0
-    
+
     async def _create_wallet_nodes(self, wallets: List[Dict], chain_id: str) -> int:
-        """Create Wallet nodes"""
-        logger.debug(f"Creating wallet nodes for {len(wallets)} wallets")
+        """Create or update Wallet nodes using MERGE to avoid duplicates"""
+        logger.debug(f"Creating or updating wallet nodes for {len(wallets)} wallets")
         try:
             driver = self.db_manager.get_neo4j_driver()
             count = 0
@@ -163,8 +152,8 @@ class GraphService:
                 
                 async with driver.session() as session:
                     await session.run("""
-                        CREATE (w:Wallet {
-                            id: $id,
+                        MERGE (w:Wallet {id: $id})
+                        SET w += {
                             address: $address,
                             chainId: $chainId,
                             balanceInUSD: $balanceInUSD,
@@ -178,7 +167,7 @@ class GraphService:
                             dailyTransactionAmounts: $dailyTransactionAmounts,
                             numberOfLiquidation: $numberOfLiquidation,
                             totalValueOfLiquidation: $totalValueOfLiquidation
-                        })
+                        }
                     """,
                     id=wallet_id,
                     address=wallet.get("address", ""),
@@ -197,17 +186,17 @@ class GraphService:
                     )
                 count += 1
             
-            logger.info(f"Created {count} wallet nodes")
+            logger.info(f"Processed {count} wallet nodes")
             if count > 0:
                 logger.debug(f"Sample wallet node: {wallets[0]}")
             return count
         except Exception as e:
-            logger.error(f"Error creating wallet nodes: {e}", exc_info=True)
+            logger.error(f"Error creating or updating wallet nodes: {e}", exc_info=True)
             return 0
-    
+
     async def _create_contract_nodes(self, contracts: List[Dict], chain_id: str) -> int:
-        """Create Contract nodes"""
-        logger.debug(f"Creating contract nodes for {len(contracts)} contracts")
+        """Create or update Contract nodes using MERGE to avoid duplicates"""
+        logger.debug(f"Creating or updating contract nodes for {len(contracts)} contracts")
         try:
             driver = self.db_manager.get_neo4j_driver()
             count = 0
@@ -216,14 +205,14 @@ class GraphService:
                 contract_id = f"{chain_id}_{contract['address']}"
                 async with driver.session() as session:
                     await session.run("""
-                        CREATE (c:Contract {
-                            id: $id,
+                        MERGE (c:Contract {id: $id})
+                        SET c += {
                             address: $address,
                             chainId: $chainId,
                             tags: $tags,
                             numberOfDailyCalls: $numberOfDailyCalls,
                             numberOfDailyActiveUsers: $numberOfDailyActiveUsers
-                        })
+                        }
                     """,
                     id=contract_id,
                     address=contract.get("address", ""),
@@ -234,17 +223,17 @@ class GraphService:
                     )
                 count += 1
             
-            logger.info(f"Created {count} contract nodes")
+            logger.info(f"Processed {count} contract nodes")
             if count > 0:
                 logger.debug(f"Sample contract node: {contracts[0]}")
             return count
         except Exception as e:
-            logger.error(f"Error creating contract nodes: {e}", exc_info=True)
+            logger.error(f"Error creating or updating contract nodes: {e}", exc_info=True)
             return 0
-    
+
     async def _create_token_nodes(self, contracts: List[Dict], chain_id: str) -> int:
-        """Create Token nodes from contracts with tag 'token'"""
-        logger.debug(f"Creating token nodes from {len(contracts)} contracts")
+        """Create or update Token nodes from contracts with tag 'token' using MERGE to avoid duplicates"""
+        logger.debug(f"Creating or updating token nodes from {len(contracts)} contracts")
         try:
             driver = self.db_manager.get_neo4j_driver()
             count = 0
@@ -252,12 +241,12 @@ class GraphService:
             for contract in contracts:
                 if "token" in contract.get("tags", []):
                     token_id = f"{chain_id}_{contract['address']}"
-                    # Serialize dictionary properties if any
-                    price_change_logs = json.dumps(contract.get("priceChangeLogs", []))
+                    # Serialize dictionary properties
+                    price_change_logs = json.dumps(contract.get("priceChangeLogs", {}))
                     async with driver.session() as session:
                         await session.run("""
-                            CREATE (t:Token {
-                                id: $id,
+                            MERGE (t:Token {id: $id})
+                            SET t += {
                                 address: $address,
                                 chainId: $chainId,
                                 symbol: $symbol,
@@ -266,7 +255,7 @@ class GraphService:
                                 marketCap: $marketCap,
                                 tradingVolume: $tradingVolume,
                                 priceChangeLogs: $priceChangeLogs
-                            })
+                            }
                         """,
                         id=token_id,
                         address=contract.get("address", ""),
@@ -274,23 +263,23 @@ class GraphService:
                         symbol=contract.get("symbol", ""),
                         decimals=contract.get("decimals", 18),
                         price=contract.get("price", 0.0),
-                        marketCap=contract.get("marketCap", 0.0),
-                        tradingVolume=contract.get("tradingVolume", 0.0),
+                        marketCap=contract.get("marketCap", ""),
+                        tradingVolume=contract.get("tradingVolume", "0"),
                         priceChangeLogs=price_change_logs
                         )
                     count += 1
             
-            logger.info(f"Created {count} token nodes")
+            logger.info(f"Processed {count} token nodes")
             if count > 0:
                 logger.debug(f"Sample token node: {contracts[0]}")
             return count
         except Exception as e:
-            logger.error(f"Error creating token nodes: {e}", exc_info=True)
+            logger.error(f"Error creating or updating token nodes: {e}", exc_info=True)
             return 0
-    
+
     async def _create_tweet_user_nodes(self, twitter_users: List[Dict]) -> int:
-        """Create TweetUser nodes"""
-        logger.debug(f"Creating tweet user nodes for {len(twitter_users)} users")
+        """Create or update TweetUser nodes using MERGE to avoid duplicates"""
+        logger.debug(f"Creating or updating tweet user nodes for {len(twitter_users)} users")
         try:
             driver = self.db_manager.get_neo4j_driver()
             count = 0
@@ -299,15 +288,15 @@ class GraphService:
                 user_id = str(user["_id"])
                 async with driver.session() as session:
                     await session.run("""
-                        CREATE (u:TweetUser {
-                            id: $id,
+                        MERGE (u:TweetUser {id: $id})
+                        SET u += {
                             userName: $userName,
                             followersCount: $followersCount,
                             favouritesCount: $favouritesCount,
                             friendsCount: $friendsCount,
                             statusesCount: $statusesCount,
                             verified: $verified
-                        })
+                        }
                     """,
                     id=user_id,
                     userName=user.get("userName", ""),
@@ -319,34 +308,34 @@ class GraphService:
                     )
                 count += 1
             
-            logger.info(f"Created {count} tweet user nodes")
+            logger.info(f"Processed {count} tweet user nodes")
             if count > 0:
                 logger.debug(f"Sample tweet user node: {twitter_users[0]}")
             return count
         except Exception as e:
-            logger.error(f"Error creating tweet user nodes: {e}", exc_info=True)
+            logger.error(f"Error creating or updating tweet user nodes: {e}", exc_info=True)
             return 0
-    
+
     async def _create_tweet_nodes(self, tweets: List[Dict]) -> int:
-        """Create Tweet nodes"""
-        logger.debug(f"Creating tweet nodes for {len(tweets)} tweets")
+        """Create or update Tweet nodes using MERGE to avoid duplicates"""
+        logger.debug(f"Creating or updating tweet nodes for {len(tweets)} tweets")
         try:
             driver = self.db_manager.get_neo4j_driver()
             count = 0
             
             for tweet in tweets:
-                tweet_id = tweet["id"]
+                tweet_id = str(tweet["id"])
                 async with driver.session() as session:
                     await session.run("""
-                        CREATE (t:Tweet {
-                            id: $id,
+                        MERGE (t:Tweet {id: $id})
+                        SET t += {
                             authorName: $authorName,
                             timestamp: $timestamp,
                             likes: $likes,
                             retweetCounts: $retweetCounts,
                             replyCounts: $replyCounts,
                             hashTags: $hashTags
-                        })
+                        }
                     """,
                     id=tweet_id,
                     authorName=tweet.get("authorName", ""),
@@ -358,77 +347,46 @@ class GraphService:
                     )
                 count += 1
             
-            logger.info(f"Created {count} tweet nodes")
+            logger.info(f"Processed {count} tweet nodes")
             if count > 0:
                 logger.debug(f"Sample tweet node: {tweets[0]}")
             return count
         except Exception as e:
-            logger.error(f"Error creating tweet nodes: {e}", exc_info=True)
+            logger.error(f"Error creating or updating tweet nodes: {e}", exc_info=True)
             return 0
-    
+
     async def _create_hashtag_nodes(self, tweets: List[Dict]) -> int:
-        """Create Hashtag nodes from tweet hashtags"""
-        logger.debug(f"Creating hashtag nodes from {len(tweets)} tweets")
+        """Create or update Hashtag nodes from tweet hashtags using MERGE to avoid duplicates"""
+        logger.debug(f"Creating or updating hashtag nodes from {len(tweets)} tweets")
         try:
             driver = self.db_manager.get_neo4j_driver()
             count = 0
             hashtags_set = set()
             
             for tweet in tweets:
-                hashtags = tweet.get("hashTags", [])
+                hashtags = tweet.get("hashTags", []) or []
                 for hashtag in hashtags:
                     hashtags_set.add(hashtag)
             
             for hashtag in hashtags_set:
                 async with driver.session() as session:
                     await session.run("""
-                        CREATE (h:Hashtag {
-                            id: $id,
+                        MERGE (h:Hashtag {id: $id})
+                        SET h += {
                             tag: $tag
-                        })
+                        }
                     """,
                     id=hashtag,
                     tag=hashtag
                     )
                 count += 1
             
-            logger.info(f"Created {count} hashtag nodes")
+            logger.info(f"Processed {count} hashtag nodes")
             if count > 0:
                 logger.debug(f"Sample hashtag node: {list(hashtags_set)[0]}")
             return count
         except Exception as e:
-            logger.error(f"Error creating hashtag nodes: {e}", exc_info=True)
-            return 0
-    
-    async def _create_relationships(self, data: Dict[str, Any], chain_id: str) -> int:
-        """Create relationships between nodes"""
-        logger.debug("Creating relationships between nodes")
-        try:
-            total_relationships = 0
-            
-            # Lending event relationships
-            total_relationships += await self._create_lending_event_relationships(data["lending_events"], chain_id)
-            
-            # Token transfer relationships
-            total_relationships += await self._create_transferred_to_relationships(data["token_transfers"], chain_id)
-            
-            # Liquidation relationships
-            total_relationships += await self._create_liquidated_by_relationships(data["liquidations"], chain_id)
-            
-            # Project relationships (PART_OF)
-            contract_addresses = [contract["address"] for contract in data["contracts"]]
-            total_relationships += await self._create_part_of_relationships(data["projects"], chain_id, contract_addresses)
-            
-            # Social account relationships (HAS_ACCOUNT)
-            total_relationships += await self._create_has_account_relationships(data["project_social"])
-            
-            # Tweet relationships (TWEETED, MENTIONS)
-            total_relationships += await self._create_tweet_relationships(data["tweets"], data["twitter_users"])
-            
-            logger.info(f"Created {total_relationships} relationships")
-            return total_relationships
-        except Exception as e:
-            logger.error(f"Error creating relationships: {e}", exc_info=True)
+            logger.error(f"Error creating or updating hashtag nodes: {e}", exc_info=True)
             return 0
     
     async def _create_lending_event_relationships(self, lending_events: List[Dict], chain_id: str) -> int:
@@ -455,7 +413,7 @@ class GraphService:
                         result = await session.run(f"""
                             MATCH (w:Wallet {{id: $wallet_id}})
                             MATCH (c:Contract {{id: $contract_id}})
-                            CREATE (w)-[r:{edge_label} {{
+                            MERGE (w)-[r:{edge_label} {{
                                 amount: $amount,
                                 timestamp: $timestamp
                             }}]->(c)
@@ -492,7 +450,7 @@ class GraphService:
                     result = await session.run("""
                         MATCH (w1:Wallet {id: $from_wallet_id})
                         MATCH (w2:Wallet {id: $to_wallet_id})
-                        CREATE (w1)-[:TRANSFERRED_TO {
+                        MERGE (w1)-[:TRANSFERRED_TO {
                             value: $value,
                             block_number: $block_number
                         }]->(w2)
@@ -525,13 +483,12 @@ class GraphService:
             for liquidation in liquidations:
                 liquidated_wallet_id = f"{chain_id}_{liquidation['liquidatedWallet']}"
                 debt_buyer_wallet_id = f"{chain_id}_{liquidation['debtBuyerWallet']}"
-                # Serialize liquidationLogs to JSON string
                 liquidation_logs = json.dumps(liquidation.get("liquidationLogs", []))
                 async with driver.session() as session:
                     result = await session.run("""
                         MATCH (w1:Wallet {id: $liquidated_wallet_id})
                         MATCH (w2:Wallet {id: $debt_buyer_wallet_id})
-                        CREATE (w1)-[:LIQUIDATED_BY {
+                        MERGE (w1)-[:LIQUIDATED_BY {
                             liquidationLogs: $liquidationLogs
                         }]->(w2)
                         RETURN COUNT(*) as created
@@ -561,7 +518,7 @@ class GraphService:
             
             # Prepare contract_addresses set for matching (mimics $or query)
             contract_addresses_set = set(contract_addresses or [])
-            logger.debug(f"Matching against {len(contract_addresses_set)} contract addresses: {contract_addresses_set}")
+            logger.debug(f"Matching against {len(contract_addresses_set)} contract addresses: {list(contract_addresses_set)[:5]}")
             
             # Collect relationships for batch processing
             contract_rels = []
@@ -569,16 +526,12 @@ class GraphService:
             
             for project in projects:
                 project_id = str(project["_id"])
-                # Deserialize contractAddresses and tokenAddresses JSON strings
-                try:
-                    contract_addresses_dict = json.loads(project.get("contractAddresses", "{}"))
-                    token_addresses_dict = json.loads(project.get("tokenAddresses", "{}"))
-                except json.JSONDecodeError as e:
-                    logger.error(f"Failed to deserialize addresses for project {project_id}: {e}")
-                    continue
+                # Use contractAddresses and tokenAddresses directly as dictionaries
+                contract_addresses_dict = project.get("contractAddresses", {})
+                token_addresses_dict = project.get("tokenAddresses", {})
                 
-                # Contract -> Project (match $or logic)
-                for contract_key in contract_addresses_dict:
+                # Contract -> Project (match QueryService's $or logic)
+                for contract_key, value in contract_addresses_dict.items():
                     if "_" in contract_key:
                         contract_chain_id, address = contract_key.split("_", 1)
                         if contract_chain_id == chain_id and (not contract_addresses_set or address in contract_addresses_set):
@@ -587,7 +540,7 @@ class GraphService:
                             logger.debug(f"Found Contract match: contract_id={contract_id}, project_id={project_id}")
                 
                 # Token -> Project
-                for token_key in token_addresses_dict:
+                for token_key, value in token_addresses_dict.items():
                     if "_" in token_key:
                         token_chain_id, address = token_key.split("_", 1)
                         if token_chain_id == chain_id:
@@ -603,15 +556,14 @@ class GraphService:
                         MATCH (c:Contract {id: rel.contract_id})
                         MATCH (p:Project {id: rel.project_id})
                         MERGE (c)-[:PART_OF]->(p)
-                        RETURN COUNT(*) AS created
+                        RETURN count(*) AS created
                     """, rels=contract_rels)
                     record = await result.single()
-                    if record:
-                        created = record["created"]
-                        count += created
-                        logger.debug(f"Created {created} Contract->Project PART_OF relationships")
-                    else:
-                        logger.warning("No Contract->Project relationships created, possibly no matching Contract nodes")
+                    created = record["created"]
+                    count += created
+                    logger.debug(f"Created {created} Contract->Project relationships")
+                    if created == 0:
+                        logger.warning("No Contract->Project relationships created, check contract_addresses")
             
             # Batch create Token -> Project relationships
             if token_rels:
@@ -621,15 +573,14 @@ class GraphService:
                         MATCH (t:Token {id: rel.token_id})
                         MATCH (p:Project {id: rel.project_id})
                         MERGE (t)-[:PART_OF]->(p)
-                        RETURN COUNT(*) AS created
+                        RETURN count(*) AS created
                     """, rels=token_rels)
                     record = await result.single()
-                    if record:
-                        created = record["created"]
-                        count += created
-                        logger.debug(f"Created {created} Token->Project PART_OF relationships")
-                    else:
-                        logger.warning("No Token->Project relationships created, possibly no matching Token nodes")
+                    created = record["created"]
+                    count += created
+                    logger.debug(f"Created {created} Token->Project relationships")
+                    if created == 0:
+                        logger.warning("No Token->Project relationships created, check token_addresses")
             
             logger.info(f"Created {count} PART_OF relationships")
             if count > 0 and projects:
@@ -656,9 +607,9 @@ class GraphService:
                     async with driver.session() as session:
                         result = await session.run("""
                             MATCH (p:Project {id: $project_id})
-                            MATCH (u:TweetUser {id: $twitter_id})
-                            CREATE (p)-[:HAS_ACCOUNT]->(u)
-                            RETURN COUNT(*) as created
+                            MATCH (u:TweetUser {userName: $twitter_id})
+                            MERGE (p)-[:HAS_ACCOUNT]->(u)
+                            RETURN count(*) as created
                         """,
                         project_id=project_id,
                         twitter_id=twitter_id
@@ -669,7 +620,7 @@ class GraphService:
             
             logger.info(f"Created {count} HAS_ACCOUNT relationships")
             if count > 0:
-                logger.debug(f"Sample HAS_ACCOUNT relationship: {project_social[0]}")
+                logger.debug(f"Sample HAS_ACCOUNT: {project_social[0]}")
             return count
         except Exception as e:
             logger.error(f"Error creating HAS_ACCOUNT relationships: {e}", exc_info=True)
@@ -686,7 +637,7 @@ class GraphService:
             user_map = {user["userName"]: str(user["_id"]) for user in twitter_users}
             
             for tweet in tweets:
-                tweet_id = tweet["id"]
+                tweet_id = str(tweet["id"])
                 author_name = tweet.get("authorName", "")
                 
                 # TWEETED
@@ -696,7 +647,7 @@ class GraphService:
                         result = await session.run("""
                             MATCH (u:TweetUser {id: $author_id})
                             MATCH (t:Tweet {id: $tweet_id})
-                            CREATE (u)-[:TWEETED {
+                            MERGE (u)-[:TWEETED {
                                 timestamp: $timestamp,
                                 likes: $likes,
                                 retweetCounts: $retweetCounts,
@@ -716,12 +667,13 @@ class GraphService:
                             count += 1
                 
                 # MENTIONS
-                for hashtag in tweet.get("hashTags", []):
+                hashtags = tweet.get("hashTags", []) or []
+                for hashtag in hashtags:
                     async with driver.session() as session:
                         result = await session.run("""
                             MATCH (t:Tweet {id: $tweet_id})
                             MATCH (h:Hashtag {id: $hashtag})
-                            CREATE (t)-[:MENTIONS]->(h)
+                            MERGE (t)-[:MENTIONS]->(h)
                             RETURN count(*) as created
                         """,
                         tweet_id=tweet_id,
