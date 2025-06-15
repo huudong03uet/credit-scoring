@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Score Display</title>
+    <style>
+        body { padding: 20px; font-family: Arial, sans-serif; }
+        .debug { margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 4px; }
+        button { padding: 10px 20px; margin: 10px; cursor: pointer; }
+        #results { margin: 20px 0; }
+        #import-results { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>Debug Score Display</h1>
+    <button onclick="testScoreDisplay()">Test Score Display</button>
+    <div id="debug-output" class="debug"></div>
+    <div id="import-results"></div>
+
+    <script type="module">
+        import { CreditScoreDisplay } from './js/components/CreditScoreDisplay.js';
+        
+        const debugOutput = document.getElementById('debug-output');
+        const creditScoreDisplay = new CreditScoreDisplay();
+        
+        // Sample data that matches the API response
+        const sampleScoreData = {
+            "status": "success",
+            "explanation": "Credit score 679.39 shows that this wallet has some positive factors...",
+            "processing_time": null,
+            "tokens_used": null,
+            "error_message": null,
+            "score": 679.3870372065838,
+            "nodes": [
+                {
+                    "numberOfDailyActiveUsers": 4,
+                    "address": "0x158079ee67fce2f58472a96584a73c7ab9ac95c1",
+                    "chainId": "0x1",
+                    "numberOfDailyCalls": 4,
+                    "id": "0x1_0x158079ee67fce2f58472a96584a73c7ab9ac95c1",
+                    "tags": ["token", "compound"]
+                }
+            ],
+            "edges": [
+                {
+                    "amount": 22.1377,
+                    "_id": "8012768_93",
+                    "timestamp": 1561272103
+                }
+            ]
+        };
+        
+        window.testScoreDisplay = function() {
+            debugOutput.innerHTML = 'Testing score display...<br>';
+            
+            try {
+                debugOutput.innerHTML += 'Sample data: ' + JSON.stringify(sampleScoreData, null, 2) + '<br>';
+                debugOutput.innerHTML += 'Calling displayCreditScoreResults...<br>';
+                
+                creditScoreDisplay.displayCreditScoreResults(sampleScoreData);
+                
+                debugOutput.innerHTML += 'Display method completed successfully!<br>';
+            } catch (error) {
+                debugOutput.innerHTML += 'ERROR: ' + error.message + '<br>';
+                debugOutput.innerHTML += 'Stack: ' + error.stack + '<br>';
+                console.error(error);
+            }
+        };
+        
+        console.log('Debug page loaded');
+    </script>
+</body>
+</html>

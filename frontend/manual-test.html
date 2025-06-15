@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual API Test</title>
+    <style>
+        body { padding: 20px; font-family: Arial, sans-serif; }
+        button { padding: 10px 20px; margin: 10px; cursor: pointer; }
+        .results { margin: 20px 0; padding: 20px; border: 1px solid #ddd; background: #f9f9f9; }
+        .error { background: #ffebee; border-color: #e57373; }
+        .success { background: #e8f5e8; border-color: #81c784; }
+    </style>
+</head>
+<body>
+    <h1>Manual API Test</h1>
+    
+    <button onclick="testWalletGraph()">Test Wallet Graph API</button>
+    <button onclick="testCreditScore()">Test Credit Score API</button>
+    <button onclick="testCombined()">Test Combined Analysis</button>
+    
+    <div id="results" class="results">
+        Click a button to test the API...
+    </div>
+
+    <script type="module">
+        import { fetchWalletGraph, fetchCreditScoreExplanation, fetchWalletAnalysis } from './js/services/apiService.js';
+        
+        const resultsDiv = document.getElementById('results');
+        
+        function log(message, type = 'info') {
+            console.log(message);
+            const timestamp = new Date().toLocaleTimeString();
+            resultsDiv.innerHTML += `<div style="margin: 5px 0; color: ${type === 'error' ? 'red' : type === 'success' ? 'green' : 'black'}">${timestamp} - ${message}</div>`;
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        window.testWalletGraph = async function() {
+            resultsDiv.innerHTML = '';
+            log('Testing Wallet Graph API...');
+            
+            try {
+                const result = await fetchWalletGraph('0x57ef012861c4937a76b5d6061be800199a2b9100', 20);
+                log('SUCCESS: Wallet Graph API returned data', 'success');
+                log('Data structure: ' + JSON.stringify(Object.keys(result), null, 2), 'success');
+                log('Sample wallet: ' + JSON.stringify(result.wallets?.[0] || 'No wallets', null, 2), 'success');
+            } catch (error) {
+                log('ERROR: ' + error.message, 'error');
+            }
+        };
+        
+        window.testCreditScore = async function() {
+            resultsDiv.innerHTML = '';
+            log('Testing Credit Score API...');
+            
+            try {
+                const result = await fetchCreditScoreExplanation('0x1_0x57ef012861c4937a76b5d6061be800199a2b9100');
+                log('SUCCESS: Credit Score API returned data', 'success');
+                log('Score: ' + result.score, 'success');
+                log('Status: ' + result.status, 'success');
+                log('Explanation: ' + result.explanation.substring(0, 100) + '...', 'success');
+            } catch (error) {
+                log('ERROR: ' + error.message, 'error');
+            }
+        };
+        
+        window.testCombined = async function() {
+            resultsDiv.innerHTML = '';
+            log('Testing Combined Analysis...');
+            
+            try {
+                const result = await fetchWalletAnalysis('0x57ef012861c4937a76b5d6061be800199a2b9100');
+                log('SUCCESS: Combined analysis completed', 'success');
+                log('Has wallet graph: ' + (!!result.walletGraph), 'success');
+                log('Has credit score: ' + (!!result.creditScore), 'success');
+                log('Errors: ' + JSON.stringify(result.errors), result.errors.length > 0 ? 'error' : 'success');
+                
+                if (result.creditScore) {
+                    log('Credit Score: ' + result.creditScore.score, 'success');
+                }
+                if (result.walletGraph) {
+                    log('Wallet data count: ' + (result.walletGraph.wallets?.length || 0), 'success');
+                }
+            } catch (error) {
+                log('ERROR: ' + error.message, 'error');
+            }
+        };
+        
+        log('Test page loaded. Click buttons to test APIs.');
+    </script>
+</body>
+</html>

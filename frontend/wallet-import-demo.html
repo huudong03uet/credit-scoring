@@ -147,8 +147,15 @@
         <!-- Results Display -->
         <div id="import-results" class="import-results" style="display: none;">
             <!-- Results will be populated here -->
-    </div>
-
-    <script type="module" src="js/components/WalletImport.js"></script>
+    </div>    <script type="module">
+        import { WalletImport } from './js/components/WalletImport.js';
+        
+        // Initialize the wallet import component when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Initializing WalletImport component...');
+            const walletImport = new WalletImport();
+            console.log('WalletImport component initialized successfully');
+        });
+    </script>
 </body>
 </html>

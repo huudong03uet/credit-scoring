@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Demo Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body { padding: 20px; }
+        .test-container { max-width: 800px; margin: 0 auto; }
+        .demo-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+        #logs { margin-top: 20px; padding: 10px; background: #f5f5f5; min-height: 200px; font-family: monospace; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Simple Demo Test</h1>
+        
+        <div class="demo-section">
+            <h3>Wallet Import Test</h3>
+            <div class="address-input-container">
+                <div class="input-group">
+                    <input 
+                        id="wallet-address-input" 
+                        type="text" 
+                        placeholder="Enter wallet address" 
+                        value=""
+                    />
+                    <button id="address-submit-btn">Import</button>
+                </div>
+                <div class="input-help">
+                    <button id="demo-wallet-btn" class="demo-btn">
+                        Try Demo Wallet
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processing Container -->
+        <div id="processing-container" class="processing-container" style="display: none;">
+            <div class="processing-spinner"></div>
+            <div class="processing-text">Processing Wallet Data...</div>
+            <div class="processing-step" id="processing-step">Initializing analysis...</div>
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+        </div>
+
+        <!-- Results Display -->
+        <div id="import-results" class="import-results" style="display: none;">
+            <!-- Results will be populated here -->
+        </div>
+
+        <div id="logs"></div>
+    </div>
+
+    <script type="module">
+        // Setup logging
+        const logsDiv = document.getElementById('logs');
+        function log(message) {
+            console.log(message);
+            logsDiv.textContent += new Date().toLocaleTimeString() + ' - ' + message + '\n';
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        // Import and test
+        try {
+            log('Starting import...');
+            const { WalletImport } = await import('./js/components/WalletImport.js');
+            log('WalletImport imported successfully');
+            
+            const walletImport = new WalletImport();
+            log('WalletImport instance created successfully');
+            
+        } catch (error) {
+            log('Error: ' + error.message);
+            console.error(error);
+        }
+    </script>
+</body>
+</html>

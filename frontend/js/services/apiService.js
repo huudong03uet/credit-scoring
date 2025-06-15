@@ -13,14 +13,25 @@ export async function fetchScore(address) {
 }
 
 export async function fetchWalletGraph(walletAddress, limit = 20) {
-    console.log(`2. Fetching wallet graph for address: ${walletAddress} with limit: ${limit}`);
-  const res = await fetch(`${API_BASE_URL}/wallet-graph?wallet_address=${walletAddress}&limit=${limit}`, {
-    method: 'GET',
-    headers: { 'accept': 'application/json' }
-  });
-  console.log(`2. Response status: ${res}`);
-  if (!res.ok) throw new Error(`Status ${res.status}`);
-  return res.json();
+  console.log(`2. Fetching wallet graph for address: ${walletAddress} with limit: ${limit}`);
+  
+  try {
+    const data = await safeFetch(`${API_BASE_URL}/wallet-graph?wallet_address=${walletAddress}&limit=${limit}`);
+    
+    // Validate expected fields for wallet graph
+    const validation = validateApiResponse(data, ['wallets', 'lending_events', 'contracts']);
+    
+    if (!validation.isValid) {
+      console.warn(`2. Wallet graph validation warnings:`, validation.errors);
+    }
+    
+    console.log(`2. Wallet graph response validated successfully`);
+    return validation.sanitized;
+    
+  } catch (error) {
+    console.error(`2. Wallet graph fetch error:`, error);
+    throw new Error(`Wallet Graph API error: ${error.message}`);
+  }
 }
 
 export async function analyzeWallet(walletData) {
@@ -72,37 +83,24 @@ export async function fetchCreditScoreExplanation(walletId) {
   console.log(`6. Fetching credit score explanation for wallet: ${walletId}`);
   
   try {
-    const res = await fetch(`${CREDIT_SCORE_API_URL}/credit_score_explain`, {
+    const data = await safeFetch(`${CREDIT_SCORE_API_URL}/credit_score_explain`, {
       method: 'POST',
-      mode: 'cors',
-      headers: { 
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify({ wallet_id: walletId })
     });
     
-    console.log(`6. Response status: ${res.status}`);
+    // Validate expected fields for credit score
+    const validation = validateApiResponse(data, ['status', 'score', 'explanation']);
     
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error(`6. Error response: ${errorText}`);
-      throw new Error(`API Error ${res.status}: ${errorText}`);
+    if (!validation.isValid) {
+      console.warn(`6. Credit score validation warnings:`, validation.errors);
     }
     
-    const data = await res.json();
-    console.log(`6. Success response:`, data);
-    return data;
+    console.log(`6. Credit score response validated successfully`);
+    return validation.sanitized;
     
   } catch (error) {
-    console.error(`6. Fetch error:`, error);
-    
-    // Check if it's a network/CORS error
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      throw new Error('Network error: Cannot connect to credit score API. Please check if the API server is running on port 7999 and CORS is enabled.');
-    }
-    
-    throw error;
+    console.error(`6. Credit score fetch error:`, error);
+    throw new Error(`Credit Score API error: ${error.message}`);
   }
 }
 
@@ -127,35 +125,168 @@ export async function fetchWalletAnalysis(walletAddress) {
       creditScore: null,
       errors: []
     };
-    
-    // Handle wallet graph result
+      // Handle wallet graph result with error tolerance
     if (walletGraphData.status === 'fulfilled') {
-      result.walletGraph = walletGraphData.value;
-      console.log(`7. Wallet graph data retrieved successfully`);
+      try {
+        result.walletGraph = sanitizeObject(walletGraphData.value);
+        console.log(`7. Wallet graph data retrieved successfully`);
+      } catch (sanitizeError) {
+        result.errors.push(`Wallet graph data corruption: ${sanitizeError.message}`);
+        result.walletGraph = null;
+      }
     } else {
-      result.errors.push(`Wallet graph error: ${walletGraphData.reason.message}`);
+      const errorMsg = safeGet(walletGraphData, 'reason.message', 'Unknown wallet graph error');
+      result.errors.push(`Wallet graph error: ${errorMsg}`);
       console.error(`7. Wallet graph error:`, walletGraphData.reason);
     }
     
-    // Handle credit score result
+    // Handle credit score result with error tolerance
     if (creditScoreData.status === 'fulfilled') {
-      result.creditScore = creditScoreData.value;
-      console.log(`7. Credit score data retrieved successfully`);
+      try {
+        result.creditScore = sanitizeObject(creditScoreData.value);
+        console.log(`7. Credit score data retrieved successfully`);
+      } catch (sanitizeError) {
+        result.errors.push(`Credit score data corruption: ${sanitizeError.message}`);
+        result.creditScore = null;
+      }
     } else {
-      result.errors.push(`Credit score error: ${creditScoreData.reason.message}`);
+      const errorMsg = safeGet(creditScoreData, 'reason.message', 'Unknown credit score error');
+      result.errors.push(`Credit score error: ${errorMsg}`);
       console.error(`7. Credit score error:`, creditScoreData.reason);
     }
     
-    // If both failed, throw an error
+    // If both failed, throw an error with detailed information
     if (!result.walletGraph && !result.creditScore) {
       throw new Error(`Both APIs failed: ${result.errors.join('; ')}`);
     }
     
     console.log(`7. Combined analysis result:`, result);
-    return result;
+    return sanitizeObject(result);
     
   } catch (error) {
     console.error(`7. Wallet analysis error:`, error);
+    throw error;
+  }
+}
+
+// Data validation utilities for error tolerance
+export function validateApiResponse(response, expectedFields = []) {
+  const validation = {
+    isValid: true,
+    errors: [],
+    sanitized: {}
+  };
+
+  try {
+    if (!response || typeof response !== 'object') {
+      validation.isValid = false;
+      validation.errors.push('Invalid response format');
+      return validation;
+    }
+
+    // Validate expected fields
+    expectedFields.forEach(field => {
+      const value = safeGet(response, field);
+      if (value === null || value === undefined) {
+        validation.errors.push(`Missing or null field: ${field}`);
+      }
+    });
+
+    // Sanitize the response
+    validation.sanitized = sanitizeObject(response);
+
+    if (validation.errors.length > 0) {
+      validation.isValid = false;
+    }
+
+  } catch (error) {
+    validation.isValid = false;
+    validation.errors.push(`Validation error: ${error.message}`);
+  }
+
+  return validation;
+}
+
+export function safeGet(obj, path, defaultValue = null) {
+  try {
+    if (!obj) return defaultValue;
+    const keys = path.split('.');
+    let result = obj;
+    for (const key of keys) {
+      if (result === null || result === undefined || !(key in result)) {
+        return defaultValue;
+      }
+      result = result[key];
+    }
+    return result !== null && result !== undefined ? result : defaultValue;
+  } catch (error) {
+    console.warn(`Safe get failed for path "${path}":`, error);
+    return defaultValue;
+  }
+}
+
+export function sanitizeObject(obj, maxDepth = 5) {
+  if (maxDepth <= 0) return obj;
+  
+  if (obj === null || obj === undefined) {
+    return null;
+  }
+
+  if (typeof obj !== 'object') {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => sanitizeObject(item, maxDepth - 1));
+  }
+
+  const sanitized = {};
+  for (const [key, value] of Object.entries(obj)) {
+    try {
+      sanitized[key] = sanitizeObject(value, maxDepth - 1);
+    } catch (error) {
+      console.warn(`Error sanitizing key "${key}":`, error);
+      sanitized[key] = null;
+    }
+  }
+
+  return sanitized;
+}
+
+// Enhanced fetch with error tolerance
+export async function safeFetch(url, options = {}) {
+  console.log(`Making request to: ${url}`);
+  console.log('Request options:', options);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      mode: 'cors',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    });
+
+    console.log(`Response status: ${response.status}`);
+    console.log(`Response headers:`, [...response.headers.entries()]);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`HTTP Error ${response.status}: ${errorText}`);
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('Response data received successfully');
+    return sanitizeObject(data);
+
+  } catch (error) {
+    console.error('Fetch error details:', error);
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      throw new Error(`Network error: Cannot connect to ${url}. Please check if the server is running and CORS is enabled.`);
+    }
     throw error;
   }
 }

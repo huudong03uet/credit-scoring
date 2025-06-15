@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Test</title>
+    <style>
+        body { padding: 20px; font-family: Arial, sans-serif; }
+        button { padding: 10px 20px; margin: 10px; cursor: pointer; font-size: 16px; }
+        #output { margin: 20px 0; padding: 20px; border: 1px solid #ddd; background: #f9f9f9; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>Direct Test</h1>
+    <button id="test-btn" onclick="runTest()">Click Me to Test Demo</button>
+    <div id="output">Click the button to run the test...</div>
+
+    <script type="module">
+        import { fetchWalletAnalysis } from './js/services/apiService.js';
+        
+        const output = document.getElementById('output');
+        
+        window.runTest = async function() {
+            output.textContent = 'Starting test...\n';
+            
+            try {
+                output.textContent += 'Calling fetchWalletAnalysis...\n';
+                const result = await fetchWalletAnalysis('0x57ef012861c4937a76b5d6061be800199a2b9100');
+                output.textContent += 'SUCCESS!\n';
+                output.textContent += 'Result:\n' + JSON.stringify(result, null, 2);
+            } catch (error) {
+                output.textContent += 'ERROR: ' + error.message + '\n';
+                output.textContent += 'Stack: ' + error.stack;
+            }
+        };
+        
+        // Also make it available globally for console testing
+        window.testWalletAnalysis = async function(address = '0x57ef012861c4937a76b5d6061be800199a2b9100') {
+            console.log('Testing wallet analysis for:', address);
+            try {
+                const result = await fetchWalletAnalysis(address);
+                console.log('Success:', result);
+                return result;
+            } catch (error) {
+                console.error('Error:', error);
+                throw error;
+            }
+        };
+        
+        console.log('Test functions loaded. You can call testWalletAnalysis() from the console.');
+    </script>
+</body>
+</html>

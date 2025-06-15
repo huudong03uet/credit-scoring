@@ -1,20 +1,25 @@
 import { analyzeWallet, uploadWalletFiles, fetchCreditScoreExplanation, fetchWalletAnalysis } from '../services/apiService.js';
-import { WalletAnalysisDisplay } from './WalletAnalysisDisplay.js';
+import { CreditScoreDisplay } from './CreditScoreDisplay.js';
+import { RawDataVisualizer } from './RawDataVisualizer.js';
 
-export class WalletImport {
-  constructor() {
+export class WalletImport {  constructor() {
+    console.log('WalletImport constructor called');
     this.currentTab = 'address';
     this.uploadedFiles = [];
     this.isProcessing = false;
-    this.walletAnalysisDisplay = new WalletAnalysisDisplay();
+    this.creditScoreDisplay = new CreditScoreDisplay();
+    this.rawDataVisualizer = new RawDataVisualizer();
+    console.log('WalletImport constructor complete, calling init...');
     this.init();
   }
 
   init() {
+    console.log('WalletImport init called');
     this.setupTabNavigation();
     this.setupAddressInput();
     this.setupFileUpload();
     this.setupWalletConnect();
+    console.log('WalletImport init complete');
   }
 
   setupTabNavigation() {
@@ -35,50 +40,95 @@ export class WalletImport {
         this.currentTab = targetTab;
       });
     });  }
-  
-  setupAddressInput() {
-    const input = document.getElementById('wallet-address-input');
-    const button = document.getElementById('address-submit-btn');
-    const demoButton = document.getElementById('demo-wallet-btn');
+    setupAddressInput() {
+    console.log('setupAddressInput called');
+    
+    // Wait for DOM to be fully ready
+    const waitForElements = () => {
+      const input = document.getElementById('wallet-address-input');
+      const button = document.getElementById('address-submit-btn');
+      const demoButton = document.getElementById('demo-wallet-btn');
+      
+      console.log('Elements check:', {
+        input: !!input,
+        button: !!button,
+        demoButton: !!demoButton,
+        domState: document.readyState
+      });
 
-    if (!input || !button) {
-      console.warn('Address input elements not found');
-      return;
-    }
-
-    button.addEventListener('click', () => this.handleAddressImport());
-    input.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') this.handleAddressImport();
-    });
-
-    // Demo button functionality
-    if (demoButton) {
-      demoButton.addEventListener('click', () => {
-        // Use the wallet address from your API example
-        const demoAddress = '0x57ef012861c4937a76b5d6061be800199a2b9100';
-        input.value = demoAddress;
+      if (!input || !button) {
+        console.warn('Required elements not found, retrying in 100ms...');
+        setTimeout(waitForElements, 100);
+        return;
+      }      // Set up main input handlers
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('=== MAIN IMPORT BUTTON CLICKED ===');
+        console.log('Event target:', e.target);
+        console.log('Current input value:', input.value);
         this.handleAddressImport();
       });
-    }
-
-    // Real-time validation
-    input.addEventListener('input', (e) => {
-      const value = e.target.value.trim();
-      const inputGroup = input.parentElement;
       
-      if (value) {
-        const isValid = this.validateWalletAddress(value);
-        if (inputGroup) {
-          inputGroup.style.borderColor = isValid ? 'var(--accent-green)' : 'var(--accent-red)';
+      input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          console.log('=== ENTER KEY PRESSED ===');
+          console.log('Current input value:', input.value);
+          this.handleAddressImport();
         }
-        button.disabled = !isValid;
+      });
+
+      // Demo button functionality
+      if (demoButton) {
+        console.log('Setting up demo button event listener');
+        
+        // Test if button is visible and enabled
+        const styles = window.getComputedStyle(demoButton);
+        console.log('Demo button styles:', {
+          display: styles.display,
+          visibility: styles.visibility,
+          disabled: demoButton.disabled,
+          offsetParent: !!demoButton.offsetParent
+        });
+          demoButton.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('=== DEMO BUTTON CLICKED ===');
+          console.log('Event target:', e.target);
+          console.log('Current input value before demo:', input.value);
+          this.handleAddressImport();
+        });
+        console.log('Demo button event listener attached successfully');
       } else {
-        if (inputGroup) {
-          inputGroup.style.borderColor = 'var(--border-color)';
-        }
-        button.disabled = false;
+        console.warn('Demo button not found in DOM');
+        console.log('Available elements:', 
+          Array.from(document.querySelectorAll('button')).map(b => ({ id: b.id, className: b.className, text: b.textContent.trim() }))
+        );
       }
-    });
+
+      // Real-time validation
+      input.addEventListener('input', (e) => {
+        const value = e.target.value.trim();
+        const inputGroup = input.parentElement;
+        
+        if (value) {
+          const isValid = this.validateWalletAddress(value);
+          if (inputGroup) {
+            inputGroup.style.borderColor = isValid ? 'var(--accent-green)' : 'var(--accent-red)';
+          }
+          button.disabled = !isValid;
+        } else {
+          if (inputGroup) {
+            inputGroup.style.borderColor = 'var(--border-color)';
+          }
+          button.disabled = false;
+        }
+      });
+    };
+    
+    // Start checking for elements
+    waitForElements();
   }
   setupFileUpload() {
     const uploadZone = document.getElementById('upload-zone');
@@ -142,25 +192,32 @@ export class WalletImport {
     if (/^[a-zA-Z0-9-]+\.eth$/.test(address)) return true;
     
     return false;
-  }
-
-  async handleAddressImport() {
+  }  async handleAddressImport() {
+    console.log('=== handleAddressImport called ===');
+    console.log('Call stack:', new Error().stack);
+    
     const input = document.getElementById('wallet-address-input');
     const address = input.value.trim();
+    console.log('Wallet address from input:', address);
+    console.log('Input element:', input);
 
     if (!address) {
+      console.log('No address provided');
       this.showError('Please enter a wallet address or ENS name');
       return;
     }
 
     if (!this.validateWalletAddress(address)) {
+      console.log('Invalid wallet address:', address);
       this.showError('Please enter a valid wallet address or ENS name');
       return;
     }
 
+    console.log('Processing wallet with address:', address);
     try {
       await this.processWallet({ type: 'address', value: address });
     } catch (error) {
+      console.error('Failed to process wallet:', error);
       this.showError('Failed to process wallet: ' + error.message);
     }
   }
@@ -278,40 +335,62 @@ export class WalletImport {
 
   async connectCoinbase() {
     this.showError('Coinbase Wallet integration coming soon!');
-  }
-
-  async processWallet(walletData) {
-    if (this.isProcessing) return;
+  }  async processWallet(walletData) {
+    console.log('processWallet called with:', walletData);
+    if (this.isProcessing) {
+      console.log('Already processing, returning early');
+      return;
+    }
     
     this.isProcessing = true;
+    console.log('Starting wallet processing...');
     this.showProcessing();
 
     try {
-      // Simulate processing steps
-      const steps = [
-        'Validating wallet data...',
-        'Analyzing transaction history...',
-        'Calculating credit metrics...',
-        'Generating risk assessment...',
-        'Finalizing score...'
-      ];
-
-      for (let i = 0; i < steps.length; i++) {
-        this.updateProcessingStep(steps[i], (i + 1) * 20);
-        await this.delay(1000);
-      }
-
-      // Make actual API call
+      // Show real processing steps
+      console.log('Step 1: Validating wallet address...');
+      this.updateProcessingStep('Validating wallet address...', 10);
+      await this.delay(500);
+      
+      console.log('Step 2: Connecting to Credit Score API...');
+      this.updateProcessingStep('Connecting to Credit Score API...', 25);
+      await this.delay(500);
+      
+      console.log('Step 3: Connecting to Wallet Graph API...');
+      this.updateProcessingStep('Connecting to Wallet Graph API...', 40);
+      await this.delay(500);
+      
+      console.log('Step 4: Fetching transaction data...');
+      this.updateProcessingStep('Fetching transaction data...', 60);
+      await this.delay(500);
+        console.log('Step 5: Calculating credit score...');
+      this.updateProcessingStep('Calculating credit score...', 80);
+      await this.delay(500);
+      
+      console.log('Step 6: Finalizing analysis...');
+      this.updateProcessingStep('Finalizing analysis...', 95);
+      
+      // Make actual API call - wait for real response
+      console.log('Making API call with data:', walletData);
       const result = await this.callAPI(walletData);
+      console.log('API call completed, result:', result);
+      
+      this.updateProcessingStep('Analysis complete!', 100);
+      await this.delay(500);
+      
+      // Only show results if we have real data
+      console.log('Showing results...');
       this.showResults(result);
 
     } catch (error) {
-      this.showError('Processing failed: ' + error.message);
+      console.error('Processing failed:', error);
+      this.showError('Processing failed: ' + error.message + '. Please check that both API servers are running.');
+      // Don't show any results on error
     } finally {
       this.isProcessing = false;
       this.hideProcessing();
     }
-  }  async callAPI(walletData) {
+  }async callAPI(walletData) {
     try {
       console.log('Calling API with wallet data:', walletData);
       
@@ -328,75 +407,19 @@ export class WalletImport {
       } else {
         // For address input, use the combined analysis function
         const walletAddress = walletData.value;
+        console.log(`Fetching real data for wallet: ${walletAddress}`);
+        
+        // Wait for real API response - no fallback data
         const analysisData = await fetchWalletAnalysis(walletAddress);
-        console.log('Combined analysis response:', analysisData);
+        console.log('Real API analysis response:', analysisData);
         return analysisData;
       }
     } catch (error) {
       console.error('API call failed:', error);
       
-      // Show error message but also provide fallback
-      this.showError(`API Error: ${error.message}. Showing demo data instead.`);
-      
-      // Return mock data based on your actual API structure
-      return {
-        walletAddress: walletData.value || 'demo-wallet',
-        walletId: `0x1_${walletData.value || '0x57ef012861c4937a76b5d6061be800199a2b9100'}`,
-        walletGraph: {
-          wallets: [{
-            address: walletData.value || "0x57ef012861c4937a76b5d6061be800199a2b9100",
-            chainId: "0x1",
-            balanceInUSD: 59.89498226995428,
-            borrowInUSD: 1.5158480089915103,
-            depositInUSD: 0.3616197511402248,
-            numberOfLiquidation: 0,
-            totalValueOfLiquidation: 0
-          }],
-          lending_events: [
-            {
-              _id: "9547741_170",
-              amount: 4,
-              block_timestamp: 1582568321,
-              contract_address: "0x39aa39c021dfbae8fac545936693ac917d5e7563",
-              event_type: "DEPOSIT",
-              wallet: walletData.value || "0x57ef012861c4937a76b5d6061be800199a2b9100"
-            }
-          ],
-          contracts: [
-            {
-              _id: "0x1_0x39aa39c021dfbae8fac545936693ac917d5e7563",
-              address: "0x39aa39c021dfbae8fac545936693ac917d5e7563",
-              tags: ["compound-usd-coin", "token", "compound-finance"],
-              numberOfDailyCalls: 30,
-              numberOfDailyActiveUsers: 30
-            }
-          ],
-          projects: [],
-          twitter_users: [],
-          tweets: []
-        },
-        creditScore: {
-          status: "success",
-          explanation: "Demo credit score explanation. This wallet shows average credit behavior with some positive lending activities.",
-          processing_time: "1.2s",
-          tokens_used: 150,
-          nodes: [
-            {
-              numberOfDailyActiveUsers: 4,
-              address: "0x158079ee67fce2f58472a96584a73c7ab9ac95c1",
-              chainId: "0x1",
-              numberOfDailyCalls: 4,
-              tags: ["token", "compound"]
-            }
-          ],
-          edges: [
-            { amount: 22.1377, _id: "8012768_93", timestamp: 1561272103 },
-            { amount: 15663, _id: "7906376_112", timestamp: 1559833296 }
-          ],
-          score: 679.3870372065838
-        },
-        errors: [`Demo data shown due to API error: ${error.message}`]
-      };
+      // Show error and re-throw - no demo data fallback
+      this.showError(`API Error: ${error.message}. Please check your API servers.`);
+      throw error; // Re-throw to stop processing
     }
   }
   showProcessing() {
@@ -429,8 +452,23 @@ export class WalletImport {
       progressFill.style.width = `${progress}%`;
     }
   }  showResults(data) {
-    // Use the combined wallet analysis display
-    this.walletAnalysisDisplay.displayWalletAnalysis(data);
+    console.log('Displaying results with data:', data);
+    
+    try {
+      if (data.creditScore && data.creditScore.status === 'success') {
+        // Display credit score results
+        this.creditScoreDisplay.displayCreditScoreResults(data.creditScore);
+      } else if (data.walletGraph) {
+        // Display raw wallet graph data
+        this.rawDataVisualizer.displayRawData(data.walletGraph);
+      } else {
+        // Show error if no valid data
+        this.showError('No valid data received from APIs');
+      }
+    } catch (error) {
+      console.error('Error displaying results:', error);
+      this.showError('Failed to display results: ' + error.message);
+    }
   }
 
   showError(message) {
@@ -459,13 +497,7 @@ export class WalletImport {
       errorDiv.remove();
     }, 5000);
   }
-
   delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
-
-// Auto-initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-  new WalletImport();
-});

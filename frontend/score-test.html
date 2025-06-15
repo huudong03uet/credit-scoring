@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Score Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body { padding: 20px; }
+        .test-container { max-width: 800px; margin: 0 auto; }
+        button { padding: 10px 20px; margin: 10px; cursor: pointer; }
+        #import-results { margin: 20px 0; }
+        .log { margin: 5px 0; padding: 5px; background: #f0f0f0; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Simple Score Test</h1>
+        <button onclick="testBasicScore()">Test Basic Score Display</button>
+        <button onclick="testRealApiData()">Test with Real API Data</button>
+        
+        <div id="logs"></div>
+        <div id="import-results"></div>
+    </div>
+
+    <script type="module">
+        import { CreditScoreDisplay } from './js/components/CreditScoreDisplay.js';
+        import { fetchCreditScoreExplanation } from './js/services/apiService.js';
+        
+        const logsDiv = document.getElementById('logs');
+        const creditDisplay = new CreditScoreDisplay();
+        
+        function log(message) {
+            console.log(message);
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log';
+            logEntry.textContent = new Date().toLocaleTimeString() + ' - ' + message;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+        
+        window.testBasicScore = function() {
+            logsDiv.innerHTML = '';
+            log('Testing basic score display...');
+            
+            const basicScoreData = {
+                status: 'success',
+                score: 679.39,
+                explanation: 'This is a test explanation for the credit score.',
+                processing_time: '2.5s',
+                tokens_used: 1500,
+                error_message: null,
+                nodes: [],
+                edges: []
+            };
+            
+            try {
+                log('Calling displayCreditScoreResults with basic data...');
+                creditDisplay.displayCreditScoreResults(basicScoreData);
+                log('SUCCESS: Basic score display completed');
+            } catch (error) {
+                log('ERROR: ' + error.message);
+                console.error(error);
+            }
+        };
+        
+        window.testRealApiData = async function() {
+            logsDiv.innerHTML = '';
+            log('Testing with real API data...');
+            
+            try {
+                log('Fetching real credit score data...');
+                const realData = await fetchCreditScoreExplanation('0x1_0x57ef012861c4937a76b5d6061be800199a2b9100');
+                log('Received real data: ' + JSON.stringify(Object.keys(realData)));
+                log('Score: ' + realData.score);
+                log('Status: ' + realData.status);
+                
+                log('Calling displayCreditScoreResults with real data...');
+                creditDisplay.displayCreditScoreResults(realData);
+                log('SUCCESS: Real API data display completed');
+            } catch (error) {
+                log('ERROR: ' + error.message);
+                console.error(error);
+            }
+        };
+        
+        log('Test page ready');
+    </script>
+</body>
+</html>

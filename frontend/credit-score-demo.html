@@ -212,58 +212,12 @@
                 
                 display.displayCreditScoreResults(scoreData);
                 showStatus('Credit score calculated successfully!', 'success');
-                
-            } catch (error) {
+                  } catch (error) {
                 console.error('Error calculating score:', error);
-                showStatus(`Error: ${error.message}`, 'error');
+                showStatus(`Error: ${error.message}. Please check if the API server is running on port 7999.`, 'error');
                 
-                // Show demo data as fallback
-                const demoData = {
-                    status: "success",
-                    explanation: "Credit score 679.39 là trung bình. Wallet có mối quan hệ tích cực với người cho vay uy tín, nhưng bị ảnh hưởng tiêu cực bởi hạng mức tín dụng thấp và thời gian sử dụng ví ngắn. Cần cải thiện hạng mức tín dụng và duy trì hoạt động giao dịch lâu dài để nâng cao credit score.",
-                    processing_time: "1.2s",
-                    tokens_used: 150,
-                    error_message: null,
-                    nodes: [
-                        {
-                            numberOfDailyActiveUsers: 4,
-                            address: "0x158079ee67fce2f58472a96584a73c7ab9ac95c1",
-                            chainId: "0x1",
-                            numberOfDailyCalls: 4,
-                            id: "0x1_0x158079ee67fce2f58472a96584a73c7ab9ac95c1",
-                            tags: ["token", "compound"]
-                        },
-                        {
-                            numberOfDailyActiveUsers: 9,
-                            address: "0xb3319f5d18bc0d84dd1b4825dcde5d5f7266d407",
-                            chainId: "0x1",
-                            numberOfDailyCalls: 9,
-                            id: "0x1_0xb3319f5d18bc0d84dd1b4825dcde5d5f7266d407",
-                            tags: ["compound-0x", "token"]
-                        },
-                        {
-                            numberOfDailyActiveUsers: 5,
-                            address: "0xf5dce57282a584d2746faf1593d3121fcac444dc",
-                            chainId: "0x1",
-                            numberOfDailyCalls: 5,
-                            id: "0x1_0xf5dce57282a584d2746faf1593d3121fcac444dc",
-                            tags: ["token", "compound"]
-                        }
-                    ],
-                    edges: [
-                        { amount: 22.1377, _id: "8012768_93", timestamp: 1561272103 },
-                        { amount: 15663, _id: "7906376_112", timestamp: 1559833296 },
-                        { amount: 9055, _id: "7913685_76", timestamp: 1559932816 },
-                        { amount: 5088, _id: "7927374_22", timestamp: 1560118947 },
-                        { amount: 3420, _id: "7930640_71", timestamp: 1560162133 },
-                        { amount: 4847.7, _id: "7944753_72", timestamp: 1560353465 },
-                        { amount: 6297.7812, _id: "7959008_120", timestamp: 1560545663 }
-                    ],
-                    score: 679.3870372065838
-                };
-                
-                display.displayCreditScoreResults(demoData);
-                showStatus('Showing demo data due to API error', 'error');
+                // Don't show any demo data - wait for real API
+                document.getElementById('import-results').style.display = 'none';
                 
             } finally {
                 calculateBtn.disabled = false;

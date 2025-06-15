@@ -7,10 +7,17 @@ from credit_score_explain_model import (
     CreditScoreExplainRequest,
     CreditScoreExplainResponse
 )
+from fastapi.middleware.cors import CORSMiddleware
 from credit_score_explain_service import CreditScoreExplainService
 
 app = FastAPI()
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 class Item(BaseModel):
     user: str
 
