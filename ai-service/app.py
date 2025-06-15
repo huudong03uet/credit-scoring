@@ -1,16 +1,34 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import random
 import uvicorn
 
-class Item(BaseModel):
-    user: str
+from credit_score_explain_model import (
+    CreditScoreExplainRequest,
+    CreditScoreExplainResponse
+)
+from credit_score_explain_service import CreditScoreExplainService
 
 app = FastAPI()
 
+class Item(BaseModel):
+    user: str
+
+@app.post("/credit_score_explain", response_model=CreditScoreExplainResponse)
+async def credit_score_explain(request: CreditScoreExplainRequest):
+    service = CreditScoreExplainService()
+    try:
+        result = await service.explain_credit_score(request)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post('/predict')
 def predict(item: Item):
-    return {'score': random.randint(300,850), "explanation": "This is a mock score generated for demonstration purposes."}
+    return {
+        'score': random.randint(300, 850),
+        "explanation": "This is a mock score generated for demonstration purposes."
+    }
 
 if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0', port=8000)
+    uvicorn.run("app:app", host='0.0.0.0', port=8000, reload=True)

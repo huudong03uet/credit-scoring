@@ -72,7 +72,7 @@ async def health_check():
 async def get_wallet_graph(
     wallet_address: str = Query(..., description="Wallet address to query"),
     chain_id: Optional[str] = Query(None, description="Blockchain chain ID (e.g., 0x38)"),
-    limit: int = Query(100, ge=1, le=1000, description="Limit for records per collection")
+    limit: int = Query(20, ge=1, le=1000, description="Limit for records per collection")
 ):
     """Get wallet-centric graph data linking Wallet, Lending Events, Contracts, Projects, Social, and Twitter"""
     if not db_manager.is_mongodb_connected():
