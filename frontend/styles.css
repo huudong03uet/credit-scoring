@@ -17,7 +17,7 @@
   --good: #4f7df9;
   --very-good: #2b8def;
   --excellent: #36cfc9;
-  --exceptional: #52c41a;
+  /* --exceptional: #52c41a; */
 }
 
 * {
@@ -305,33 +305,6 @@ body {
   white-space: nowrap;
 }
 
-.very-poor {
-  background: linear-gradient(90deg, var(--very-poor) 0%, var(--poor) 100%);
-}
-
-.poor {
-  background: linear-gradient(90deg, var(--poor) 0%, var(--fair) 100%);
-}
-
-.fair {
-  background: linear-gradient(90deg, var(--fair) 0%, var(--good) 100%);
-}
-
-.good {
-  background: linear-gradient(90deg, var(--good) 0%, var(--very-good) 100%);
-}
-
-.very-good {
-  background: linear-gradient(90deg, var(--very-good) 0%, var(--excellent) 100%);
-}
-
-.excellent {
-  background: linear-gradient(90deg, var(--excellent) 0%, var(--exceptional) 100%);
-}
-
-.exceptional {
-  background: linear-gradient(90deg, var(--exceptional) 0%, var(--exceptional) 100%);
-}
 
 .gauge-labels {
   display: flex;
@@ -1029,7 +1002,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(59, 130, 246, 0.1);
+  background: transparent;
 }
 
 .score-value {
@@ -1051,9 +1024,12 @@ body {
 }
 
 .score-level {
-  font-size: 24px;
-  font-weight: 600;
-  margin-bottom: 4px;
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background-color: white;
 }
 
 .score-level.excellent { color: var(--excellent); }
@@ -1064,8 +1040,9 @@ body {
 .score-level.very-poor { color: var(--very-poor); }
 
 .score-range {
-  color: var(--text-secondary);
-  font-size: 14px;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 600;
 }
 
 .processing-info {
@@ -2470,4 +2447,68 @@ body {
   padding: 4px 8px;
   background: rgba(107, 114, 128, 0.1);
   border-radius: 4px;
+}
+
+/* Score Bar */
+.score-bar-container {
+  margin-top: 24px;
+  padding: 20px 0;
+}
+
+.score-bar {
+  position: relative;
+  height: 20px;
+  background: linear-gradient(
+    to right,
+    #ef4444 0% 16.67%,    /* Very Poor: 300-400 */
+    #ff7a45 16.67% 33.33%, /* Poor: 400-500 */
+    #ffc107 33.33% 50%,    /* Fair: 500-600 */
+    #9254de 50% 66.67%,    /* Good: 600-700 */
+    #4f7df9 66.67% 83.33%, /* Very Good: 700-800 */
+    #22c55e 83.33% 100%    /* Excellent: 800-900 */
+  );
+  border-radius: 10px;
+  margin: 20px 0;
+  border: 2px solid var(--border-color);
+}
+
+.score-indicator {
+  position: absolute;
+  top: -8px;
+  width: 16px;
+  height: 36px;
+  background: var(--text-primary);
+  border-radius: 8px;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2);
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.score-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.score-bar-ranges {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.score-bar-range {
+  flex: 1;
+  text-align: center;
+  padding: 0 4px;
+}
+
+.score-bar-range.active {
+  color: var(--text-primary);
+  font-weight: 600;
 }

@@ -204,9 +204,7 @@ export class CreditScoreDisplay {
       const processingTime = this.safeGet(scoreData, 'processing_time');
       const tokensUsed = this.safeNumber(scoreData.tokens_used);
 
-      console.log('Score rendering data:', { score, scoreLevel, scoreColor, processingTime, tokensUsed });
-
-      return `
+      console.log('Score rendering data:', { score, scoreLevel, scoreColor, processingTime, tokensUsed });      return `
         <div class="score-summary">
           <div class="main-score">
             <div class="score-circle" style="border-color: ${scoreColor}">
@@ -218,6 +216,8 @@ export class CreditScoreDisplay {
               <div class="score-range">${scoreLevel.range}</div>
             </div>
           </div>
+          
+          ${this.renderScoreBar(score)}
           
           <div class="processing-info">
             ${processingTime ? `
@@ -246,6 +246,54 @@ export class CreditScoreDisplay {
           <p><small>Check console for details</small></p>
         </div>
       `;
+    }
+  }
+
+  renderScoreBar(score) {
+    try {
+      // Calculate position on the bar (300-900 range)
+      const minScore = 300;
+      const maxScore = 900;
+      const normalizedScore = Math.max(minScore, Math.min(maxScore, score));
+      const position = ((normalizedScore - minScore) / (maxScore - minScore)) * 100;
+      
+      // Define score ranges with their labels
+      const ranges = [
+        { label: 'Very Poor', range: '300-400', class: 'very-poor' },
+        { label: 'Poor', range: '400-500', class: 'poor' },
+        { label: 'Fair', range: '500-600', class: 'fair' },
+        { label: 'Good', range: '600-700', class: 'good' },
+        { label: 'Very Good', range: '700-800', class: 'very-good' },
+        { label: 'Excellent', range: '800-900', class: 'excellent' }
+      ];
+      
+      // Determine which range the current score falls into
+      const currentRangeIndex = Math.min(Math.floor((normalizedScore - minScore) / 100), 5);
+      
+      return `
+        <div class="score-bar-container">
+          <div class="score-bar-ranges">
+            ${ranges.map((range, index) => `
+              <div class="score-bar-range ${index === currentRangeIndex ? 'active' : ''}">${range.label}</div>
+            `).join('')}
+          </div>
+          <div class="score-bar">
+            <div class="score-indicator" style="left: ${position}%"></div>
+          </div>
+          <div class="score-bar-labels">
+            <span>300</span>
+            <span>400</span>
+            <span>500</span>
+            <span>600</span>
+            <span>700</span>
+            <span>800</span>
+            <span>900</span>
+          </div>
+        </div>
+      `;
+    } catch (error) {
+      console.error('Error rendering score bar:', error);
+      return '<div class="score-bar-error">Unable to display score bar</div>';
     }
   }
 
@@ -810,36 +858,50 @@ export class CreditScoreDisplay {
 
   getScoreLevel(score) {
     try {
-      if (score >= 750) {
-        return { label: 'Excellent', class: 'excellent', range: '750-850' };
+      if (score >= 800) {
+        return { label: 'Excellent', class: 'excellent', range: '800-900' };
       } else if (score >= 700) {
-        return { label: 'Good', class: 'good', range: '700-749' };
-      } else if (score >= 650) {
-        return { label: 'Fair', class: 'fair', range: '650-699' };
+        return { label: 'Very Good', class: 'very-good', range: '700-799' };
       } else if (score >= 600) {
-        return { label: 'Poor', class: 'poor', range: '600-649' };
+        return { label: 'Good', class: 'good', range: '600-699' };
+      } else if (score >= 500) {
+        return { label: 'Fair', class: 'fair', range: '500-599' };
+      }
+      else if (score >= 400) {
+        return { label: 'Poor', class: 'poor', range: '400-499' };
       } else {
-        return { label: 'Very Poor', class: 'very-poor', range: '300-599' };
+        return { label: 'Very Poor', class: 'very-poor', range: '300-399' };
       }
     } catch (error) {
       console.error('Error determining score level:', error);
       return { label: 'Unknown', class: 'unknown', range: 'N/A' };
     }
   }
+  //   --very-poor: #ff4d4f;
+  // --poor: #ff7a45;
+  // --fair: #9254de;
+  // --good: #4f7df9;
+  // --very-good: #2b8def;
+  // --excellent: #36cfc9;
 
   getScoreColor(score) {
     try {
-      if (score >= 750) {
-        return '#4caf50'; // Green
+      if (score >= 800) {
+        return '#36cfc9'; // Excellent
       } else if (score >= 700) {
-        return '#8bc34a'; // Light Green
-      } else if (score >= 650) {
-        return '#ffc107'; // Amber
-      } else if (score >= 600) {
-        return '#ff9800'; // Orange
-      } else {
-        return '#f44336'; // Red
+        return '#2b8def'; // Very Good
       }
+      else if (score >= 600) {
+        return '#4f7df9'; // Good
+      } else if (score >= 500) {
+        return '#9254de'; // Fair
+      } else if (score >= 400) {
+        return '#ff7a45'; // Poor
+      } else {
+        return '#ff4d4f'; // Very Poor
+      }
+      
+
     } catch (error) {
       console.error('Error determining score color:', error);
       return '#9e9e9e'; // Gray fallback

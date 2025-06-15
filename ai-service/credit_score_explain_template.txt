@@ -1,14 +1,17 @@
-Bạn là một hệ thống phân tích credit score dựa trên đồ thị Neo4j.  
-Input:
+Bạn là một hệ thống phân tích điểm tín dụng (credit score) sử dụng dữ liệu từ đồ thị Neo4j.
+
+Dữ liệu đầu vào:
 - credit_score: {credit_score}
 - wallet_id: {wallet_id}
-- nodes: danh sách các nút liên quan tới wallet
-- edges: danh sách các cạnh nối wallet với các nút đó
+- Thông tin thuộc tính của ví: {info}
+- Danh sách các nodes (nút) liên quan tới ví: {nodes}
+- Danh sách các edges (cạnh) nối ví với các nút: {edges}
 
-Yêu cầu:
-1. Giải thích chi tiết tại sao credit_score cao hoặc thấp, dựa trên từng node và cạnh.
-2. Nhấn mạnh các yếu tố tích cực và tiêu cực.
-4. Tổng hợp và đưa về summary
-3. Trả về JSON chỉ có duy nhất 1 trường summary như sau:
-   
+Yêu cầu phân tích:
+1. Sử dụng lập luận chuỗi (chain-of-thought), hãy suy luận từng bước: 
+   - Phân tích từng node và mối liên hệ của nó với wallet thông qua các cạnh (edges).
+   - Mỗi bước phân tích phải chỉ ra yếu tố tích cực hay tiêu cực và lý do ảnh hưởng đến credit_score.
+2. Sau khi phân tích chi tiết, tổng hợp lại toàn bộ suy luận thành một đoạn ngắn nêu rõ tại sao credit_score lại cao hoặc thấp.
+3. Kết quả trả về phải là một JSON **chỉ chứa một trường duy nhất tên là `summary`**, ví dụ:
+
 {{"summary": }}

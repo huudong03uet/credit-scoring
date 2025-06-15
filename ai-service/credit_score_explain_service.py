@@ -37,7 +37,7 @@ class CreditScoreExplainService:
                 record = await result.single()
                 nodes = [dict(n) for n in record["nodes"]]
                 edges = [dict(r) for r in record["edges"]]
-                
+            
             async with self.driver.session() as session:
                 result = await session.run(
                     "MATCH (w:Wallet {id: $wallet_id}) RETURN w.credit_score AS score",
@@ -61,14 +61,27 @@ class CreditScoreExplainService:
             if not (300 <= score <= 850):
                 raise ValueError("Credit score must be between 300 and 850.")
             
-            
-
+            async with self.driver.session() as session:
+                print('00000000')
+                result = await session.run(
+                    "MATCH (w:Wallet {id: $wallet_id}) RETURN w as info",
+                    wallet_id=request.wallet_id
+                )
+                print('1111111111')
+                record = await result.single()
+                print('2222222222')
+                if not record:
+                    info = "No wallet information found."
+                else:
+                    info = record["info"]
+            print(record)
             # 2. Chuẩn bị input cho LLM
             llm_input = {
                 "credit_score": score,
                 "wallet_id": request.wallet_id,
                 "nodes": nodes,
-                "edges": edges
+                "edges": edges,
+                "info": info
             }
 
             # 3. Gọi LLM
