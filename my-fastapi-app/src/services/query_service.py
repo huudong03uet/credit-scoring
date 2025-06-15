@@ -3,6 +3,7 @@ from typing import Optional, List, Dict, Any
 from src.core.database import DatabaseManager
 from src.schemas.responses import *
 from bson import ObjectId
+import asyncio
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ class QueryService:
             # Step 1: Query Wallets
             db = self.db_manager.get_mongodb_database("knowledge_graph")
             wallet_collection = db["wallets"]
-            wallet_query = {"address": wallet_address} 
+            wallet_query = {"address": wallet_address}
             wallet_projection = {
                 "_id": 1, "address": 1, "chainId": 1, "balanceInUSD": 1, "balanceChangeLogs": 1,
                 "depositInUSD": 1, "depositChangeLogs": 1, "borrowInUSD": 1, "borrowChangeLogs": 1,
@@ -95,6 +96,67 @@ class QueryService:
                     logger.debug(f"Sample contract: {result['contracts'][0]}")
             else:
                 logger.debug("Step 3: Skipped contracts query (no contract addresses)")
+
+            # Step 4: Query Token Transfers
+            # Giả sử self.db_manager.get_cassandra_session() đã trả về session còn sống
+            if wallet_addresses:
+                block_numbers = list(range(22685200, 22685211))
+                result["token_transfers"] = []
+
+                session = self.db_manager.get_cassandra_session()  # KHÔNG dùng 'with'
+
+                # Query for from_address
+                query_from = """
+                    SELECT bucket_id, block_number, contract_address, log_index, from_address, to_address, transaction_hash, value
+                    FROM token_transfer
+                    WHERE block_number IN ?
+                    AND from_address = ?
+                    LIMIT ?
+                    ALLOW FILTERING
+                """
+                prepared_from = session.prepare(query_from)
+
+                # Query for to_address
+                query_to = """
+                    SELECT bucket_id, block_number, contract_address, log_index, from_address, to_address, transaction_hash, value
+                    FROM token_transfer
+                    WHERE block_number IN ?
+                    AND to_address = ?
+                    LIMIT ?
+                    ALLOW FILTERING
+                """
+                prepared_to = session.prepare(query_to)
+
+                # Thực hiện truy vấn song song (trên thread executor)
+                loop = asyncio.get_event_loop()
+                rows_from, rows_to = await asyncio.gather(
+                    loop.run_in_executor(None, lambda: session.execute(prepared_from, (tuple(block_numbers), wallet_address, limit))),
+                    loop.run_in_executor(None, lambda: session.execute(prepared_to, (tuple(block_numbers), wallet_address, limit)))
+                )
+
+                # Merge results (avoid duplicate transactions by hash + log_index)
+                seen = set()
+                for row in list(rows_from) + list(rows_to):
+                    tx_key = (row.transaction_hash, row.log_index)
+                    if tx_key in seen:
+                        continue
+                    seen.add(tx_key)
+                    transaction = {
+                        "bucket_id": row.bucket_id,
+                        "block_number": row.block_number,
+                        "contract_address": row.contract_address,
+                        "log_index": row.log_index,
+                        "from_address": row.from_address,
+                        "to_address": row.to_address,
+                        "transaction_hash": row.transaction_hash,
+                        "value": row.value
+                    }
+                    result["token_transfers"].append(transaction)
+
+                logger.info(f"Step 4: Retrieved {len(result['token_transfers'])} unique transactions for contracts")
+                if result["token_transfers"]:
+                    logger.debug(f"Sample transaction: {result['token_transfers'][0]}")
+
 
             # Step 4: Query Projects
             if contract_addresses:

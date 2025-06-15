@@ -19,6 +19,8 @@ class WalletSource(str, Enum):
     wallets = "wallets"
     lending_events = "lending_events"
     liquidations = "liquidations"
+    token_transfer = "token_transfer"
+    fullOnNeo4j = "full"  # For full graph build
 class GraphService:
     def __init__(self, db_manager: DatabaseManager):
         self.db_manager = db_manager
@@ -43,43 +45,59 @@ class GraphService:
                 "errors": []
             }
 
-            # Step 1: Fetch wallets from MongoDB
+            # Step 1: Fetch wallets from the specified source
+            unique_wallets = []
+            seen_addresses = set()
+
             if source == WalletSource.wallets:
                 db = self.db_manager.get_mongodb_database("knowledge_graph")
                 collection = db["wallets"]
                 projection = {"_id": 0, "address": 1}
                 cursor = collection.find({}, projection).skip(offset).limit(limit)
-            else:
-                if source == WalletSource.lending_events:
-                    db = self.db_manager.get_mongodb_database("ethereum_blockchain_etl")
-                    collection = db["lending_events"]
-                    projection = {"_id": 0, "wallet": 1}
-                    cursor = collection.find({}, projection).skip(offset).limit(limit)
-                else:
-                    if source == WalletSource.liquidations:
-                        db = self.db_manager.get_mongodb_database("knowledge_graph")
-                        collection = db["liquidates"]
-                        projection = {"_id": 0, "debtBuyerWallet": 1}
-                        cursor = collection.find({}, projection).skip(offset).limit(limit)
-                    else:
-                        raise ValueError(f"Invalid source: {source}")
-            
-            # Step 2: Deduplicate wallets by address
-            unique_wallets = []
-            seen_addresses = set()
-            async for doc in cursor:
-                if source == WalletSource.liquidations:
-                    # Extract both wallet addresses
-                    addresses = [doc.get("debtBuyerWallet")] 
-                else:
-                    # Single address field
-                    address = doc.get("address") if source == WalletSource.wallets else doc.get("wallet")
-                    addresses = [address]
-                
-                for address in addresses:
+                async for doc in cursor:
+                    address = doc.get("address")
                     if address and address.lower() not in seen_addresses:
                         unique_wallets.append(address)
                         seen_addresses.add(address.lower())
+
+            elif source == WalletSource.lending_events:
+                db = self.db_manager.get_mongodb_database("ethereum_blockchain_etl")
+                collection = db["lending_events"]
+                projection = {"_id": 0, "wallet": 1}
+                cursor = collection.find({}, projection).skip(offset).limit(limit)
+                async for doc in cursor:
+                    address = doc.get("wallet")
+                    if address and address.lower() not in seen_addresses:
+                        unique_wallets.append(address)
+                        seen_addresses.add(address.lower())
+
+            elif source == WalletSource.liquidations:
+                db = self.db_manager.get_mongodb_database("knowledge_graph")
+                collection = db["liquidates"]
+                projection = {"_id": 0, "debtBuyerWallet": 1, "liquidatedWallet": 1}
+                cursor = collection.find({}, projection).skip(offset).limit(limit)
+                async for doc in cursor:
+                    for address in [doc.get("debtBuyerWallet"), doc.get("liquidatedWallet")]:
+                        if address and address.lower() not in seen_addresses:
+                            unique_wallets.append(address)
+                            seen_addresses.add(address.lower())
+
+            elif source == WalletSource.token_transfer:
+                # Truy vấn vào Cassandra
+                session = self.db_manager.get_cassandra_session()
+                query = "SELECT from_address, to_address FROM token_transfer LIMIT %s"
+                rows = session.execute(query, (limit,))
+                addresses = set()
+                for row in rows:
+                    if row.from_address and row.from_address.lower() not in addresses:
+                        addresses.add(row.from_address.lower())
+                    if row.to_address and row.to_address.lower() not in addresses:
+                        addresses.add(row.to_address.lower())
+                unique_wallets = list(addresses)
+
+            else:
+                raise ValueError(f"Invalid source: {source}")
+
             
             processed_wallets = set()
             async with self.db_manager.get_neo4j_driver() as neo4j_session:
@@ -97,7 +115,7 @@ class GraphService:
             # Step 4: Filter out already processed wallets
             unprocessed_wallets = [
                 wallet for wallet in unique_wallets
-                if wallet.lower() not in processed_wallets
+                if wallet.lower() in processed_wallets
             ]
 
             # Step 5: Update result
@@ -583,22 +601,29 @@ class GraphService:
             count = 0
             
             for transfer in token_transfers:
+                transfer_id = f"{transfer['block_number']}_{transfer['contract_address']}_{transfer['log_index']}_{transfer['bucket_id']}"
                 from_wallet_id = f"{chain_id}_{transfer['from_address']}"
                 to_wallet_id = f"{chain_id}_{transfer['to_address']}"
                 async with driver.session() as session:
                     result = await session.run("""
                         MATCH (w1:Wallet {id: $from_wallet_id})
                         MATCH (w2:Wallet {id: $to_wallet_id})
-                        MERGE (w1)-[:TRANSFERRED_TO {
-                            value: $value,
-                            block_number: $block_number
-                        }]->(w2)
+                        MERGE (w1)-[r:TRANSFERRED_TO {id: $transfer_id}]->(w2)
+                        SET r.value = $value,
+                            r.block_number = $block_number,
+                            r.contract_address = $contract_address,
+                            r.log_index = $log_index,
+                            r.bucket_id = $bucket_id
                         RETURN COUNT(*) as created
                     """,
-                    from_wallet_id=from_wallet_id,
-                    to_wallet_id=to_wallet_id,
-                    value=transfer.get("value", "0"),
-                    block_number=transfer.get("block_number", 0)
+                        from_wallet_id=from_wallet_id,
+                        to_wallet_id=to_wallet_id,
+                        transfer_id=transfer_id,
+                        value=transfer.get("value", "0"),
+                        block_number=transfer.get("block_number", 0),
+                        contract_address=transfer.get("contract_address", ""),
+                        log_index=transfer.get("log_index", 0),
+                        bucket_id=transfer.get("bucket_id", 0)
                     )
                     record = await result.single()
                     if record and record["created"] > 0:
