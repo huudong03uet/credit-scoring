@@ -877,30 +877,30 @@ export class CreditScoreDisplay {
       return { label: 'Unknown', class: 'unknown', range: 'N/A' };
     }
   }
-  //   --very-poor: #ff4d4f;
+  // --very-poor: #ef4444;
   // --poor: #ff7a45;
-  // --fair: #9254de;
-  // --good: #4f7df9;
-  // --very-good: #2b8def;
-  // --excellent: #36cfc9;
+  // --fair: #ffc107;
+  // --good: #9254de;
+  // --very-good: #4f7df9;
+  // --excellent: #22c55e;
 
 
-  
+
   getScoreColor(score) {
     try {
       if (score >= 800) {
-        return '#36cfc9'; // Excellent
+        return '#22c55e'; // Excellent
       } else if (score >= 700) {
-        return '#2b8def'; // Very Good
+        return '#4f7df9'; // Very Good
       }
       else if (score >= 600) {
-        return '#4f7df9'; // Good
+        return '#9254de'; // Good
       } else if (score >= 500) {
-        return '#9254de'; // Fair
+        return '#ffc107'; // Fair
       } else if (score >= 400) {
         return '#ff7a45'; // Poor
       } else {
-        return '#ff4d4f'; // Very Poor
+        return '#ef4444'; // Very Poor
       }
 
 
