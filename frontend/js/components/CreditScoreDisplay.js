@@ -885,6 +885,7 @@ export class CreditScoreDisplay {
   // --excellent: #22c55e;
 
 
+  
 
   getScoreColor(score) {
     try {
