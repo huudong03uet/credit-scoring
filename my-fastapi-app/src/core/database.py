@@ -3,7 +3,7 @@ import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
 import asyncpg
 from neo4j import AsyncGraphDatabase
-from cassandra.cluster import Cluster
+from cassandra.cluster import Cluster, ExecutionProfile, EXEC_PROFILE_DEFAULT
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.policies import DCAwareRoundRobinPolicy
 from dotenv import load_dotenv
@@ -96,12 +96,16 @@ class DatabaseManager:
                 print("⚠️ Cassandra config missing")
                 return
             auth = PlainTextAuthProvider(username=user, password=pwd)
-            lbp = DCAwareRoundRobinPolicy(local_dc=os.getenv("CASSANDRA_DATACENTER", "datacenter-1"))
+            profile = ExecutionProfile(
+                request_timeout=60*60*24,  # 1 ngày
+                load_balancing_policy=DCAwareRoundRobinPolicy(local_dc=os.getenv("CASSANDRA_DATACENTER", "datacenter-1")),
+                # Thêm các option khác nếu cần...
+            )
             self.cassandra_cluster = Cluster(
                 contact_points=hosts,
                 port=port,
                 auth_provider=auth,
-                load_balancing_policy=lbp
+                execution_profiles={EXEC_PROFILE_DEFAULT: profile}
             )
             # Connect in executor to avoid blocking event loop
             loop = asyncio.get_event_loop()
@@ -110,7 +114,6 @@ class DatabaseManager:
                 lambda: self.cassandra_cluster.connect(keyspace)
             )
             print("✅ Cassandra connected successfully")
-            self.cassandra_session.default_timeout = 6000000
         except Exception as e:
             print(f"❌ Cassandra connection failed: {e}")
             self.cassandra_cluster = None

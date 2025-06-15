@@ -15,7 +15,7 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 1000px; /* Increased max-width */
             margin: 40px auto;
             padding: 20px;
         }
@@ -75,6 +75,25 @@
             color: #8B93A7;
             font-size: 14px;
         }
+
+        .gauge-label {
+            font-weight: bold;
+            text-shadow: 0px 0px 5px rgba(0,0,0,0.9);
+            font-size: 20px !important; /* Force larger size */
+            paint-order: stroke;
+            stroke: rgba(0,0,0,0.8);
+            stroke-width: 2px;
+        }
+
+        .score-bubble {
+            font-weight: bold;
+            font-size: 16px !important; /* Force larger size */
+        }
+        
+        /* Add a static position class to prevent elements from moving */
+        .fixed-element {
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -111,9 +130,9 @@
         class D3CreditScoreGauge {
             constructor(options = {}) {
                 this.containerId = options.containerId || 'gauge-container';
-                this.width = options.width || 800;
-                this.height = options.height || 400;
-                this.margin = options.margin || { top: 40, right: 30, bottom: 40, left: 30 };
+                this.width = options.width || 900; // Increased default width
+                this.height = options.height || 500; // Increased default height
+                this.margin = options.margin || { top: 60, right: 30, bottom: 60, left: 30 }; // Increased top margin
                 this.minScore = options.minScore || 300;
                 this.maxScore = options.maxScore || 900;
                 this.currentScore = options.currentScore || 650;
@@ -136,24 +155,34 @@
             }
             
             initialize() {
-                // Create SVG
-                const svg = d3.select(`#${this.containerId}`)
+                // Create main container SVG with increased dimensions
+                const svgContainer = d3.select(`#${this.containerId}`)
                     .append("svg")
                     .attr("width", this.width)
                     .attr("height", this.height)
-                    .append("g")
+                    .style("display", "block")
+                    .style("margin", "0 auto");
+                
+                // Create a fixed group for all static elements (won't move with needle)
+                const fixedGroup = svgContainer.append("g")
+                    .attr("class", "fixed-elements")
                     .attr("transform", `translate(${this.width / 2},${this.height - this.margin.bottom})`);
                 
-                // Define arc generator
-                const arcRadius = Math.min(this.width, this.height * 2) / 2 - this.margin.top;
+                // Create separate needle group that will be animated
+                const needleGroup = svgContainer.append("g")
+                    .attr("class", "needle-group")
+                    .attr("transform", `translate(${this.width / 2},${this.height - this.margin.bottom})`);
+                
+                // Define arc generator with increased thickness
+                const arcRadius = Math.min(this.width, this.height * 1.8) / 2 - this.margin.top; // Increased radius
                 const arc = d3.arc()
-                    .innerRadius(arcRadius - 40)
+                    .innerRadius(arcRadius - 90) // Increased thickness from 60 to 90
                     .outerRadius(arcRadius)
                     .startAngle(-Math.PI / 2)
                     .endAngle(Math.PI / 2);
                 
                 // Create linear gradient
-                const gradient = svg.append("defs")
+                const gradient = fixedGroup.append("defs")
                     .append("linearGradient")
                     .attr("id", "gauge-gradient")
                     .attr("x1", "0%")
@@ -195,7 +224,7 @@
                     .attr("stop-color", "#48E88D");
                 
                 // Draw background arc with gradient
-                svg.append("path")
+                fixedGroup.append("path")
                     .datum({ startAngle: -Math.PI / 2, endAngle: Math.PI / 2 })
                     .attr("d", arc)
                     .style("fill", "url(#gauge-gradient)");
@@ -205,10 +234,30 @@
                     .domain([this.minScore, this.maxScore])
                     .range([-Math.PI / 2, Math.PI / 2]);
                 
-                // Score bubbles
+                // Add category labels in FIXED positions on the gauge
+                this.categories.forEach((category) => {
+                    const midScore = (category.min + category.max) / 2;
+                    const angle = scoreScale(midScore);
+                    
+                    // Position category labels inside the gauge arc with larger offset
+                    // This ensures they are properly fixed to the arc
+                    const [x, y] = this.getCoordinates(angle, arcRadius - 45);
+                    
+                    fixedGroup.append("text")
+                        .attr("class", "gauge-label fixed-element")
+                        .attr("x", x)
+                        .attr("y", y)
+                        .attr("text-anchor", "middle")
+                        .attr("fill", "white")
+                        .attr("font-size", "20px") // Increased font size
+                        .attr("font-weight", "bold")
+                        .text(category.name);
+                });
+                
+                // Score bubbles with increased size in FIXED positions
                 this.scoreLabels.forEach(score => {
                     const angle = scoreScale(score);
-                    const [x, y] = this.getCoordinates(angle, arcRadius + 20);
+                    const [x, y] = this.getCoordinates(angle, arcRadius + 40); // Moved farther out
                     
                     // Determine label color based on position
                     let labelColor;
@@ -221,61 +270,82 @@
                     else if (score === 870) labelColor = "#45C7B3";
                     else if (score === 900) labelColor = "#48E88D";
                     
-                    // Add bubble background
-                    svg.append("circle")
+                    // Add bubbles to fixed group, not needle group
+                    fixedGroup.append("circle")
+                        .attr("class", "fixed-element")
                         .attr("cx", x)
                         .attr("cy", y)
-                        .attr("r", 18)
+                        .attr("r", 32) // Increased size from 24 to 32
                         .attr("fill", labelColor);
                     
-                    // Add score text
-                    svg.append("text")
+                    fixedGroup.append("text")
+                        .attr("class", "score-bubble fixed-element")
                         .attr("x", x)
                         .attr("y", y)
                         .attr("dy", "0.35em")
                         .attr("text-anchor", "middle")
                         .attr("fill", "white")
-                        .attr("font-size", "12px")
+                        .attr("font-size", "16px") // Increased font size
                         .attr("font-weight", "bold")
                         .text(score);
                 });
                 
-                // Add category labels
-                this.categories.forEach((category, i) => {
-                    const midScore = (category.min + category.max) / 2;
-                    const angle = scoreScale(midScore);
-                    const [x, y] = this.getCoordinates(angle, arcRadius - 60);
-                    
-                    svg.append("text")
-                        .attr("x", x)
-                        .attr("y", y)
-                        .attr("text-anchor", "middle")
-                        .attr("fill", "white")
-                        .attr("font-size", "14px")
-                        .attr("font-weight", "bold")
-                        .text(category.name);
-                });
+                // Create needle with larger dimensions
+                this.needleGroup = needleGroup;
                 
-                // Create needle group
-                this.needleGroup = svg.append("g")
-                    .attr("class", "needle");
-                
-                // Add needle line
+                // Add needle line with increased size
                 this.needle = this.needleGroup.append("line")
                     .attr("x1", 0)
                     .attr("y1", 0)
                     .attr("x2", 0)
-                    .attr("y2", -arcRadius + 40)
+                    .attr("y2", -arcRadius + 20) // Longer needle
                     .attr("stroke", "white")
-                    .attr("stroke-width", 4);
+                    .attr("stroke-width", 10) // Thicker needle (was 6)
+                    .attr("stroke-linecap", "round");
                 
-                // Add needle circle
+                // Add glow filter for the needle
+                const defs = this.needleGroup.append("defs");
+                const filter = defs.append("filter")
+                    .attr("id", "glow")
+                    .attr("x", "-50%")
+                    .attr("y", "-50%")
+                    .attr("width", "200%")
+                    .attr("height", "200%");
+                    
+                filter.append("feGaussianBlur")
+                    .attr("stdDeviation", "3")
+                    .attr("result", "blur");
+                    
+                filter.append("feComposite")
+                    .attr("in", "SourceGraphic")
+                    .attr("in2", "blur")
+                    .attr("operator", "over");
+                
+                // Add needle center circle with increased size
                 this.needleGroup.append("circle")
                     .attr("cx", 0)
                     .attr("cy", 0)
-                    .attr("r", 10)
+                    .attr("r", 25) // Bigger circle (was 15)
                     .attr("fill", "white")
-                    .attr("filter", "drop-shadow(0 0 5px rgba(255, 255, 255, 0.7))");
+                    .attr("filter", "url(#glow)");
+                
+                // Add inner circle for style
+                this.needleGroup.append("circle")
+                    .attr("cx", 0)
+                    .attr("cy", 0)
+                    .attr("r", 18) // Bigger inner circle (was 10)
+                    .attr("fill", "#0B0E14");
+                
+                // Display current score value in a large, fixed position
+                this.scoreText = fixedGroup.append("text")
+                    .attr("class", "fixed-element")
+                    .attr("x", 0)
+                    .attr("y", -arcRadius / 4)
+                    .attr("text-anchor", "middle")
+                    .attr("font-size", "60px") // Much larger font
+                    .attr("font-weight", "bold")
+                    .attr("fill", "white")
+                    .text(this.currentScore);
                 
                 // Set initial needle position
                 this.setScore(this.currentScore);
@@ -294,15 +364,21 @@
                 const percentage = (this.currentScore - this.minScore) / scoreRange;
                 const angle = -90 + (percentage * 180);
                 
+                // Update score text
+                this.scoreText.text(this.currentScore);
+                
+                // Animate needle only (not the text or bubbles)
                 this.needleGroup.transition()
                     .duration(1500)
                     .ease(d3.easeBounceOut)
                     .attrTween("transform", () => {
                         const currentAngle = this.currentAngle || -90;
                         this.currentAngle = angle;
+                        const centerX = this.width / 2;
+                        const centerY = this.height - this.margin.bottom;
                         return d3.interpolate(
-                            `rotate(${currentAngle})`,
-                            `rotate(${angle})`
+                            `translate(${centerX},${centerY}) rotate(${currentAngle})`,
+                            `translate(${centerX},${centerY}) rotate(${angle})`
                         );
                     });
             }
@@ -313,8 +389,8 @@
             const gauge = new D3CreditScoreGauge({
                 containerId: 'gauge-container',
                 currentScore: 650,
-                width: window.innerWidth > 900 ? 800 : window.innerWidth - 100,
-                height: 300
+                width: window.innerWidth > 1000 ? 900 : window.innerWidth - 50, // Larger default size
+                height: 450 // Increased height
             });
             
             // Example: Set different score after a delay
@@ -326,6 +402,17 @@
             window.setGaugeScore = (score) => {
                 gauge.setScore(score);
             };
+            
+            // Make gauge responsive
+            window.addEventListener('resize', () => {
+                document.getElementById('gauge-container').innerHTML = '';
+                const newGauge = new D3CreditScoreGauge({
+                    containerId: 'gauge-container',
+                    currentScore: gauge.currentScore,
+                    width: window.innerWidth > 1000 ? 900 : window.innerWidth - 50,
+                    height: 450
+                });
+            });
         });
     </script>
 </body>
