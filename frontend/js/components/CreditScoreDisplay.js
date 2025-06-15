@@ -884,6 +884,8 @@ export class CreditScoreDisplay {
   // --very-good: #2b8def;
   // --excellent: #36cfc9;
 
+
+  
   getScoreColor(score) {
     try {
       if (score >= 800) {
@@ -900,7 +902,7 @@ export class CreditScoreDisplay {
       } else {
         return '#ff4d4f'; // Very Poor
       }
-      
+
 
     } catch (error) {
       console.error('Error determining score color:', error);
