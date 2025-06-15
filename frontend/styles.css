@@ -9,14 +9,19 @@
   --accent-red: #ef4444;
   --accent-purple: #8b5cf6;
   --border-color: #e2e8f0;
-  
+  /*     #ef4444 0% 16.67%,    /* Very Poor: 300-400 */
+    /* #ff7a45 16.67% 33.33%, Poor: 400-500 */
+    /* #ffc107 33.33% 50%,    Fair: 500-600 */
+    /* #9254de 50% 66.67%,    Good: 600-700 */
+    /* #4f7df9 66.67% 83.33%, Very Good: 700-800 */
+    /* #22c55e 83.33% 100%    Excellent: 800-900 */ 
   /* Score colors */
-  --very-poor: #ff4d4f;
+  --very-poor: #ef4444;
   --poor: #ff7a45;
-  --fair: #9254de;
-  --good: #4f7df9;
-  --very-good: #2b8def;
-  --excellent: #36cfc9;
+  --fair: #ffc107;
+  --good: #9254de;
+  --very-good: #4f7df9;
+  --excellent: #22c55e;
   /* --exceptional: #52c41a; */
 }
 
