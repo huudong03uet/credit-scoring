@@ -319,17 +319,18 @@ export class WalletImport {
         // For file uploads, we still use the upload API
         const rawData = await uploadWalletFiles(walletData.value);
         console.log('Raw file upload response:', rawData);
-        return rawData;
+        return {
+          walletAddress: 'uploaded-files',
+          walletGraph: rawData,
+          creditScore: null,
+          errors: []
+        };
       } else {
-        // For address input, use the credit score explanation API
+        // For address input, use the combined analysis function
         const walletAddress = walletData.value;
-        
-        // Create wallet_id in the format expected by the API
-        const walletId = `0x1_${walletAddress}`;
-        
-        const scoreData = await fetchCreditScoreExplanation(walletId);
-        console.log('Credit score API response:', scoreData);
-        return scoreData;
+        const analysisData = await fetchWalletAnalysis(walletAddress);
+        console.log('Combined analysis response:', analysisData);
+        return analysisData;
       }
     } catch (error) {
       console.error('API call failed:', error);
@@ -339,66 +340,62 @@ export class WalletImport {
       
       // Return mock data based on your actual API structure
       return {
-        status: "success",
-        explanation: "Credit score 679.39 là trung bình. Wallet có mối quan hệ tích cực với người cho vay uy tín, nhưng bị ảnh hưởng tiêu cực bởi hạng mức tín dụng thấp và thời gian sử dụng ví ngắn. Cần cải thiện hạng mức tín dụng và duy trì hoạt động giao dịch lâu dài để nâng cao credit score.",
-        processing_time: "1.2s",
-        tokens_used: 150,
-        error_message: null,
-        nodes: [
-          {
-            numberOfDailyActiveUsers: 4,
-            address: "0x158079ee67fce2f58472a96584a73c7ab9ac95c1",
+        walletAddress: walletData.value || 'demo-wallet',
+        walletId: `0x1_${walletData.value || '0x57ef012861c4937a76b5d6061be800199a2b9100'}`,
+        walletGraph: {
+          wallets: [{
+            address: walletData.value || "0x57ef012861c4937a76b5d6061be800199a2b9100",
             chainId: "0x1",
-            numberOfDailyCalls: 4,
-            id: "0x1_0x158079ee67fce2f58472a96584a73c7ab9ac95c1",
-            tags: ["token", "compound"]
-          },
-          {
-            numberOfDailyActiveUsers: 9,
-            address: "0xb3319f5d18bc0d84dd1b4825dcde5d5f7266d407",
-            chainId: "0x1",
-            numberOfDailyCalls: 9,
-            id: "0x1_0xb3319f5d18bc0d84dd1b4825dcde5d5f7266d407",
-            tags: ["compound-0x", "token"]
-          },
-          {
-            numberOfDailyActiveUsers: 5,
-            address: "0xf5dce57282a584d2746faf1593d3121fcac444dc",
-            chainId: "0x1",
-            numberOfDailyCalls: 5,
-            id: "0x1_0xf5dce57282a584d2746faf1593d3121fcac444dc",
-            tags: ["token", "compound"]
-          }
-        ],
-        edges: [
-          {
-            amount: 22.1377,
-            _id: "8012768_93",
-            timestamp: 1561272103
-          },
-          {
-            amount: 15663,
-            _id: "7906376_112",
-            timestamp: 1559833296
-          },
-          {
-            amount: 9055,
-            _id: "7913685_76",
-            timestamp: 1559932816
-          },
-          {
-            amount: 5088,
-            _id: "7927374_22",
-            timestamp: 1560118947
-          },
-          {
-            amount: 3420,
-            _id: "7930640_71",
-            timestamp: 1560162133
-          }
-        ],
-        score: 679.3870372065838,
-        error: true
+            balanceInUSD: 59.89498226995428,
+            borrowInUSD: 1.5158480089915103,
+            depositInUSD: 0.3616197511402248,
+            numberOfLiquidation: 0,
+            totalValueOfLiquidation: 0
+          }],
+          lending_events: [
+            {
+              _id: "9547741_170",
+              amount: 4,
+              block_timestamp: 1582568321,
+              contract_address: "0x39aa39c021dfbae8fac545936693ac917d5e7563",
+              event_type: "DEPOSIT",
+              wallet: walletData.value || "0x57ef012861c4937a76b5d6061be800199a2b9100"
+            }
+          ],
+          contracts: [
+            {
+              _id: "0x1_0x39aa39c021dfbae8fac545936693ac917d5e7563",
+              address: "0x39aa39c021dfbae8fac545936693ac917d5e7563",
+              tags: ["compound-usd-coin", "token", "compound-finance"],
+              numberOfDailyCalls: 30,
+              numberOfDailyActiveUsers: 30
+            }
+          ],
+          projects: [],
+          twitter_users: [],
+          tweets: []
+        },
+        creditScore: {
+          status: "success",
+          explanation: "Demo credit score explanation. This wallet shows average credit behavior with some positive lending activities.",
+          processing_time: "1.2s",
+          tokens_used: 150,
+          nodes: [
+            {
+              numberOfDailyActiveUsers: 4,
+              address: "0x158079ee67fce2f58472a96584a73c7ab9ac95c1",
+              chainId: "0x1",
+              numberOfDailyCalls: 4,
+              tags: ["token", "compound"]
+            }
+          ],
+          edges: [
+            { amount: 22.1377, _id: "8012768_93", timestamp: 1561272103 },
+            { amount: 15663, _id: "7906376_112", timestamp: 1559833296 }
+          ],
+          score: 679.3870372065838
+        },
+        errors: [`Demo data shown due to API error: ${error.message}`]
       };
     }
   }
@@ -431,9 +428,9 @@ export class WalletImport {
     if (progressFill) {
       progressFill.style.width = `${progress}%`;
     }
-  }showResults(data) {
-    // Use the credit score display for showing results
-    this.creditScoreDisplay.displayCreditScoreResults(data);
+  }  showResults(data) {
+    // Use the combined wallet analysis display
+    this.walletAnalysisDisplay.displayWalletAnalysis(data);
   }
 
   showError(message) {
