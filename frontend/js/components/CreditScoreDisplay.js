@@ -296,25 +296,70 @@ export class CreditScoreDisplay {
       return '<div class="score-bar-error">Unable to display score bar</div>';
     }
   }
+renderExplanation(scoreData) {
+  try {
+    const explanation = this.safeGet(scoreData, 'explanation');
+    if (!explanation) return '';
 
-  renderExplanation(scoreData) {
-    try {
-      const explanation = this.safeGet(scoreData, 'explanation');
-      if (!explanation) return '';
+    // Split the explanation into lines for easier processing
+    const lines = explanation.trim().split('\n');
+    let formattedHtml = '<div class="explanation-section"><h5><i class="fas fa-lightbulb"></i> Score Explanation</h5><div class="explanation-content">';
 
-      return `
-        <div class="explanation-section">
-          <h5><i class="fas fa-lightbulb"></i> Score Explanation</h5>
-          <div class="explanation-content">
-            <p>${explanation}</p>
-          </div>
-        </div>
-      `;
-    } catch (error) {
-      console.error('Error rendering explanation:', error);
-      return '';
+    // Regular expression to match numbered sections like "1) Heading"
+    const sectionRegex = /^\d+\)\s*(.*?)(?=:)/;
+    let currentContent = [];
+    let inSection = false;
+
+    // Add the introductory sentence (first line)
+    formattedHtml += `<p>${lines[0]}</p>`;
+
+    // Process each line starting from the second line
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      const sectionMatch = line.match(sectionRegex);
+
+      if (sectionMatch) {
+        // If we were collecting content for a previous section, close it
+        if (inSection && currentContent.length > 0) {
+          formattedHtml += `<p>${currentContent.join(' ')}</p>`;
+          currentContent = [];
+        }
+        // Start a new section with the heading
+        const heading = sectionMatch[1].trim();
+        formattedHtml += `<h6 style="color: #005B99;">${heading}</h6>`;
+        // Add the content after the heading in the same line
+        const contentAfterHeading = line.replace(/^\d+\)\s*.*?:\s*/, '').trim();
+        if (contentAfterHeading) {
+          currentContent.push(contentAfterHeading);
+        }
+        inSection = true;
+      } else if (inSection && !line.startsWith('Yếu tố tiêu cực') && !line.startsWith('Tổng thể')) {
+        // Collect content for the current section
+        currentContent.push(line);
+      } else {
+        // Handle negative factors or summary
+        if (inSection && currentContent.length > 0) {
+          formattedHtml += `<p>${currentContent.join(' ')}</p>`;
+          currentContent = [];
+          inSection = false;
+        }
+        // Add negative factors or summary as a paragraph
+        formattedHtml += `<p>${line}</p>`;
+      }
     }
+
+    // Close the last section if there's content
+    if (currentContent.length > 0) {
+      formattedHtml += `<p>${currentContent.join(' ')}</p>`;
+    }
+
+    formattedHtml += '</div></div>';
+    return formattedHtml;
+  } catch (error) {
+    console.error('Error rendering explanation:', error);
+    return '';
   }
+}
 
   renderNetworkGraph(scoreData) {
     try {
@@ -885,7 +930,7 @@ export class CreditScoreDisplay {
   // --excellent: #22c55e;
 
 
-  
+
 
   getScoreColor(score) {
     try {
