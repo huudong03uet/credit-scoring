@@ -133,6 +133,42 @@ async def get_wallet_graph(
             status_code=500,
             detail=f"Failed to fetch wallet graph data: {error_detail}"
         )
+    
+@app.get("/credit-score-wallet")
+async def get_wallet_graph(
+    wallet_address: str = Query(..., description="Wallet address to query"),
+    chain_id: Optional[str] = Query(None, description="Blockchain chain ID (e.g., 0x38)"),
+    limit: int = Query(100, ge=1, le=1000, description="Limit for records per collection")
+):
+    """Get wallet-centric graph data linking Wallet, Lending Events, Contracts, Projects, Social, and Twitter"""
+    if not db_manager.is_mongodb_connected():
+        raise HTTPException(status_code=503, detail="MongoDB not available")
+    if chain_id and not db_manager.is_cassandra_connected():
+        raise HTTPException(status_code=503, detail="Cassandra not available")
+
+    try:
+        data = await graph_service.build_graph_from_mongodb(
+            wallet_address=wallet_address,
+            chain_id=chain_id,
+            limit=limit
+        )
+        return data
+    except Exception as e:
+        # Log the error with more detail
+        import traceback
+        error_detail = str(e)
+        error_traceback = traceback.format_exc()
+        print(f"Error in get_wallet_graph: {error_detail}")
+        print(error_traceback)
+        
+        # Return a more informative error to the client
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch wallet graph data: {error_detail}"
+        )
+
+
+
 @app.get("/build-wallet-batch")
 async def build_wallet_batch(
     limit: int = Query(100, ge=1, le=10000000, description="Number of wallets to process per batch"),

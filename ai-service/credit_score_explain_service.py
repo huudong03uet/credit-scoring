@@ -50,7 +50,7 @@ class CreditScoreExplainService:
                 else:
                     score = record["score"]
 
-
+            print('12345566')
 
             # Kiểm tra credit score có hợp lệ không
             if not (300 <= score <= 850):
@@ -80,12 +80,18 @@ class CreditScoreExplainService:
             parsed = clean_and_parse_json(content)
             print(f"LLM response: {parsed}")
             elapsed = time.time() - start
+            print(nodes)
+            print(edges)
             return CreditScoreExplainResponse(
                 status=CreditScoreExplainStatus.SUCCESS,
                 explanation= parsed.get('summary', 'No explanation provided'),
                 # data=parsed,
                 # processing_time=round(elapsed, 3),
                 # tokens_used=1
+                score=score,
+                nodes=nodes,
+                edges=edges,
+            
             )
         except Exception as e:
             elapsed = time.time() - start

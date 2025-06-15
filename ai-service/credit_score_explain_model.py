@@ -23,3 +23,6 @@ class CreditScoreExplainResponse(BaseModel):
     processing_time: Optional[float] = Field(None, description="Thời gian xử lý (giây)")
     tokens_used: Optional[int] = Field(None, description="Số token LLM đã dùng")
     error_message: Optional[str] = None
+    nodes: Any = Field(None, description="Danh sách các nút trong đồ thị")
+    edges: Any = Field(None, description="Danh sách các cạnh trong đồ thị")
+    score: Optional[Any] = Field(None, description="Credit score của ví")

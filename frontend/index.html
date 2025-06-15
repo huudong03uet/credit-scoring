@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Centic - Blockchain Credit Scoring</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -11,9 +10,9 @@
     <div class="app-container">
         <!-- Sidebar -->
         <div class="sidebar">
-            <div class="logo">
+            <!-- <div class="logo">
                 <img src="https://placeholder.pics/svg/150x50/FFFFFF/2D3443/Centic" alt="Centic Logo">
-            </div>
+            </div> -->
             <div class="nav-items">
                 <div class="nav-item active">
                     <i class="fas fa-th-large"></i>
@@ -164,6 +163,120 @@
                   <div class="value-range">$20K - 25K+</div>
                 </div>
               </div>
+            </div>            <!-- Wallet Import Section -->
+            <div class="wallet-import-section">
+                <div class="wallet-import-card">
+                    <div class="import-header">
+                        <h3><i class="fas fa-download"></i> Import & Analyze Wallet</h3>
+                        <p>Import your wallet through multiple methods and get comprehensive credit scoring</p>
+                    </div>
+                    
+                    <!-- Import Methods Tabs -->
+                    <div class="import-tabs">
+                        <button class="import-tab active" data-tab="address">
+                            <i class="fas fa-address-card"></i>
+                            Address
+                        </button>
+                        <button class="import-tab" data-tab="file">
+                            <i class="fas fa-file-upload"></i>
+                            File Upload
+                        </button>
+                        <button class="import-tab" data-tab="connect">
+                            <i class="fas fa-link"></i>
+                            Connect Wallet
+                        </button>
+                    </div>
+
+                    <!-- Import Content -->
+                    <div class="import-content">
+                        <!-- Address Input Tab -->
+                        <div id="address-tab" class="tab-content active">
+                            <div class="address-input-container">
+                                <div class="input-group">
+                                    <i class="fas fa-wallet"></i>
+                                    <input 
+                                        id="wallet-address-input" 
+                                        type="text" 
+                                        placeholder="Enter wallet address (0x...) or ENS name" 
+                                        maxlength="100"
+                                    />
+                                    <button id="address-submit-btn" class="import-btn">
+                                        <i class="fas fa-search"></i>
+                                        Import
+                                    </button>
+                                </div>
+                                <div class="input-help">
+                                    <small>Supports Ethereum addresses and ENS names (e.g., vitalik.eth)</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- File Upload Tab -->
+                        <div id="file-tab" class="tab-content">
+                            <div class="file-upload-container">
+                                <div class="upload-zone" id="upload-zone">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <p>Drag & drop wallet files here</p>
+                                    <p class="upload-hint">or click to browse</p>
+                                    <input type="file" id="wallet-file-input" accept=".json,.csv,.txt" multiple hidden>
+                                </div>
+                                <div class="upload-formats">
+                                    <small>Supported formats: JSON, CSV, TXT</small>
+                                </div>
+                                <div id="file-list" class="file-list"></div>
+                                <button id="file-submit-btn" class="import-btn" style="display: none;">
+                                    <i class="fas fa-upload"></i>
+                                    Process Files
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Connect Wallet Tab -->
+                        <div id="connect-tab" class="tab-content">
+                            <div class="wallet-connect-container">
+                                <div class="connect-options">
+                                    <button class="wallet-option" id="metamask-connect">
+                                        <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" alt="MetaMask">
+                                        <span>MetaMask</span>
+                                    </button>
+                                    <button class="wallet-option" id="walletconnect-connect">
+                                        <img src="https://docs.walletconnect.com/img/walletconnect-logo.svg" alt="WalletConnect">
+                                        <span>WalletConnect</span>
+                                    </button>
+                                    <button class="wallet-option" id="coinbase-connect">
+                                        <img src="https://avatars.githubusercontent.com/u/1026493?s=200&v=4" alt="Coinbase">
+                                        <span>Coinbase Wallet</span>
+                                    </button>
+                                </div>
+                                <div class="connect-help">
+                                    <small>Connect your wallet to automatically import and analyze</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Processing Status -->
+                    <div id="processing-status" class="processing-status" style="display: none;">
+                        <div class="processing-animation">
+                            <div class="spinner"></div>
+                            <div class="processing-text">
+                                <h4>Processing Wallet Data...</h4>
+                                <p id="processing-step">Analyzing transaction history</p>
+                            </div>
+                        </div>
+                        <div class="processing-progress">
+                            <div class="progress-bar">
+                                <div id="progress-fill" class="progress-fill"></div>
+                            </div>
+                            <span id="progress-text">25%</span>
+                        </div>
+                    </div>
+
+                    <!-- Results Display -->
+                    <div id="import-results" class="import-results" style="display: none;">
+                        <!-- Results will be populated here -->
+                    </div>
+                </div>
             </div>
 
             <!-- Tabs Navigation -->
@@ -370,6 +483,7 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- use main.js as module instead of old script.js -->
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>

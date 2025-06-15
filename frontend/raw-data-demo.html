@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raw Data Visualization - SCRTSibyl</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            padding: 20px;
+            background: var(--bg-primary);
+        }
+        .demo-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .demo-header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: var(--text-primary);
+        }
+        .demo-header h1 {
+            font-size: 36px;
+            margin-bottom: 16px;
+        }
+        .demo-header p {
+            color: var(--text-secondary);
+            font-size: 18px;
+        }
+        .test-section {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+            border: 1px solid var(--border-color);
+        }
+        .test-buttons {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .test-btn {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .test-btn:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        .test-btn.success {
+            background: var(--accent-green);
+        }
+        .test-btn.demo {
+            background: var(--accent-purple);
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="demo-header">
+            <h1><span style="color: var(--accent-blue);">SCRTSibyl</span> Raw Data Visualization</h1>
+            <p>Display original API data without analysis - Lists, summaries, and charts</p>
+        </div>
+
+        <div class="test-section">
+            <h3><i class="fas fa-flask"></i> Test Data Visualization</h3>
+            <p>Click the buttons below to test different data visualization scenarios:</p>
+            
+            <div class="test-buttons">
+                <button id="test-api-btn" class="test-btn">
+                    <i class="fas fa-plug"></i>
+                    Test Live API Data
+                </button>
+                <button id="test-demo-btn" class="test-btn demo">
+                    <i class="fas fa-play"></i>
+                    Show Demo Data
+                </button>
+                <button id="test-empty-btn" class="test-btn">
+                    <i class="fas fa-ban"></i>
+                    Test Empty Data
+                </button>
+                <button id="clear-btn" class="test-btn" style="background: var(--accent-red);">
+                    <i class="fas fa-trash"></i>
+                    Clear Results
+                </button>
+            </div>
+        </div>
+
+        <!-- Results will be displayed here -->
+        <div id="import-results" class="import-results" style="display: none;">
+            <!-- Raw data visualization will be populated here -->
+        </div>
+    </div>
+
+    <script type="module">
+        import { fetchWalletGraph } from './js/services/apiService.js';
+        import { RawDataVisualizer } from './js/components/RawDataVisualizer.js';
+
+        const visualizer = new RawDataVisualizer();
+
+        // Demo wallet address from your API data
+        const DEMO_WALLET = '0xd0f10060e182c8eb8fa0a4fa4d77adf0e0475261';
+
+        // Mock data based on your actual API structure
+        const DEMO_DATA = {
+            wallets: [{
+                address: "0xd0f10060e182c8eb8fa0a4fa4d77adf0e0475261",
+                chainId: "0x1",
+                balanceInUSD: 59.89498226995428,
+                borrowInUSD: 1.5158480089915103,
+                depositInUSD: 0.3616197511402248,
+                numberOfLiquidation: 0,
+                totalValueOfLiquidation: 0,
+                balanceChangeLogs: {
+                    "1746346131": 44.53638529239595,
+                    "1746430190": 43.629335337141896,
+                    "1746520405": 43.71276661967596,
+                    "1746609258": 44.3653211682937,
+                    "1746697964": 44.69937617349976,
+                    "1746782726": 52.40958530589762,
+                    "1746854682": 55.368664083200066,
+                    "1746956906": 59.56262956811787,
+                    "1749895286": 59.89498226995428
+                },
+                dailyNumberOfTransactions: {
+                    "1746921600": 0,
+                    "1747008000": 2,
+                    "1747094400": 1,
+                    "1747180800": 0,
+                    "1747267200": 3,
+                    "1747353600": 1,
+                    "1747440000": 0,
+                    "1747526400": 2
+                }
+            }],
+            lending_events: [
+                {
+                    _id: "9547741_170",
+                    amount: 4,
+                    block_timestamp: 1582568321,
+                    contract_address: "0x39aa39c021dfbae8fac545936693ac917d5e7563",
+                    event_type: "DEPOSIT",
+                    wallet: "0xd0f10060e182c8eb8fa0a4fa4d77adf0e0475261"
+                },
+                {
+                    _id: "9547786_280",
+                    amount: 0.01,
+                    block_timestamp: 1582568983,
+                    contract_address: "0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5",
+                    event_type: "BORROW",
+                    wallet: "0xd0f10060e182c8eb8fa0a4fa4d77adf0e0475261"
+                },
+                {
+                    _id: "9549766_77",
+                    amount: 0.009097847,
+                    block_timestamp: 1582595598,
+                    contract_address: "0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5",
+                    event_type: "REPAY",
+                    wallet: "0xd0f10060e182c8eb8fa0a4fa4d77adf0e0475261"
+                },
+                {
+                    _id: "9548908_25",
+                    amount: 15,
+                    block_timestamp: 1582583970,
+                    contract_address: "0x5d3a536e4d6dbd6114cc1ead35777bab948e3643",
+                    event_type: "DEPOSIT",
+                    wallet: "0xd0f10060e182c8eb8fa0a4fa4d77adf0e0475261"
+                },
+                {
+                    _id: "9550581_97",
+                    amount: 3.2,
+                    block_timestamp: 1582606456,
+                    contract_address: "0x5d3a536e4d6dbd6114cc1ead35777bab948e3643",
+                    event_type: "WITHDRAW",
+                    wallet: "0xd0f10060e182c8eb8fa0a4fa4d77adf0e0475261"
+                }
+            ],
+            contracts: [
+                {
+                    _id: "0x1_0x39aa39c021dfbae8fac545936693ac917d5e7563",
+                    address: "0x39aa39c021dfbae8fac545936693ac917d5e7563",
+                    tags: ["compound-usd-coin", "token", "compound-finance"],
+                    numberOfDailyCalls: 30,
+                    numberOfDailyActiveUsers: 30
+                },
+                {
+                    _id: "0x1_0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5",
+                    address: "0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5",
+                    tags: ["compound-ether", "token", "compound-finance"],
+                    numberOfDailyCalls: 30,
+                    numberOfDailyActiveUsers: 30
+                },
+                {
+                    _id: "0x1_0x5d3a536e4d6dbd6114cc1ead35777bab948e3643",
+                    address: "0x5d3a536e4d6dbd6114cc1ead35777bab948e3643",
+                    tags: ["cdai", "token", "compound-finance"],
+                    numberOfDailyCalls: 28,
+                    numberOfDailyActiveUsers: 28
+                }
+            ],
+            projects: [
+                {
+                    _id: "morpho-compound",
+                    name: "Morpho Compound",
+                    tvl: 59750.48334393667,
+                    deployedChains: ["0x1"],
+                    category: "Lending"
+                }
+            ],
+            twitter_users: [
+                {
+                    _id: "1420789685811650560",
+                    userName: "MorphoLabs",
+                    favouritesCount: 7297,
+                    friendsCount: 14,
+                    followersCount: 70732,
+                    statusesCount: 4177,
+                    verified: false
+                }
+            ],
+            tweets: [
+                { id: "1923019679313834376", authorName: "MorphoLabs", timestamp: 1747318594, likes: 16, retweetCounts: 2, replyCounts: 0 },
+                { id: "1923037667702284489", authorName: "MorphoLabs", timestamp: 1747322882, likes: 174, retweetCounts: 17, replyCounts: 16 },
+                { id: "1923045745936171238", authorName: "MorphoLabs", timestamp: 1747324808, likes: 31, retweetCounts: 2, replyCounts: 5 },
+                { id: "1924502361684508814", authorName: "MorphoLabs", timestamp: 1747672093, likes: 249, retweetCounts: 24, replyCounts: 15 }
+            ],
+            token_transfers: [],
+            liquidations: []
+        };
+
+        // Event handlers
+        document.getElementById('test-api-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('test-api-btn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+            btn.disabled = true;
+
+            try {
+                const apiData = await fetchWalletGraph(DEMO_WALLET);
+                visualizer.displayRawData(apiData);
+                btn.innerHTML = '<i class="fas fa-check"></i> API Data Loaded';
+                btn.classList.add('success');
+            } catch (error) {
+                console.error('API Error:', error);
+                visualizer.displayRawData(DEMO_DATA);
+                btn.innerHTML = '<i class="fas fa-exclamation"></i> Using Demo Data';
+                btn.style.background = '#f59e0b';
+            } finally {
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-plug"></i> Test Live API Data';
+                    btn.classList.remove('success');
+                    btn.style.background = '';
+                }, 2000);
+            }
+        });
+
+        document.getElementById('test-demo-btn').addEventListener('click', () => {
+            visualizer.displayRawData(DEMO_DATA);
+        });
+
+        document.getElementById('test-empty-btn').addEventListener('click', () => {
+            const emptyData = {
+                wallets: [],
+                lending_events: [],
+                contracts: [],
+                projects: [],
+                twitter_users: [],
+                tweets: [],
+                token_transfers: [],
+                liquidations: []
+            };
+            visualizer.displayRawData(emptyData);
+        });
+
+        document.getElementById('clear-btn').addEventListener('click', () => {
+            document.getElementById('import-results').style.display = 'none';
+            visualizer.cleanup();
+        });
+    </script>
+</body>
+</html>

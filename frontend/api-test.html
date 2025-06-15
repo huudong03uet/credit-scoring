@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test - Credit Scoring</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #0b0e14;
+            color: white;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #1e2634;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        .result {
+            background: #171c27;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .error {
+            color: #ef4444;
+        }
+        .success {
+            color: #22c55e;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>API Connection Test</h1>
+        <p>Test the wallet graph API connection</p>
+        
+        <button onclick="testAPI()">Test API Connection</button>
+        <button onclick="testWalletAnalyzer()">Test Wallet Analyzer</button>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <script type="module">
+        import { fetchWalletGraph } from './js/services/apiService.js';
+        import { WalletAnalyzer } from './js/utils/walletAnalyzer.js';
+
+        window.testAPI = async function() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = 'Testing API connection...';
+            
+            try {
+                const demoAddress = '0xd0f10060e182c8eb8fa0a4fa4d77adf0e0475261';
+                const data = await fetchWalletGraph(demoAddress);
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `API Success!\n\nResponse:\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `API Error: ${error.message}`;
+            }
+        };
+
+        window.testWalletAnalyzer = async function() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = 'Testing wallet analyzer...';
+            
+            try {
+                // Mock data based on your API response
+                const mockData = {
+                    wallets: [{
+                        address: "0xd0f10060e182c8eb8fa0a4fa4d77adf0e0475261",
+                        balanceInUSD: 59.89498226995428,
+                        borrowInUSD: 1.5158480089915103,
+                        depositInUSD: 0.3616197511402248,
+                        numberOfLiquidation: 0,
+                        balanceChangeLogs: {
+                            "1746346131": 44.53638529239595,
+                            "1749895286": 59.89498226995428
+                        }
+                    }],
+                    lending_events: [
+                        { event_type: "DEPOSIT", amount: 4, wallet: "0xd0f10060e182c8eb8fa0a4fa4d77adf0e0475261" },
+                        { event_type: "BORROW", amount: 0.01, wallet: "0xd0f10060e182c8eb8fa0a4fa4d77adf0e0475261" },
+                        { event_type: "REPAY", amount: 0.009097847, wallet: "0xd0f10060e182c8eb8fa0a4fa4d77adf0e0475261" }
+                    ],
+                    contracts: [],
+                    projects: [],
+                    tweets: []
+                };
+
+                const analysis = WalletAnalyzer.analyzeWalletData(mockData);
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `Analyzer Success!\n\nAnalysis:\n${JSON.stringify(analysis, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `Analyzer Error: ${error.message}`;
+            }
+        };
+    </script>
+</body>
+</html>
