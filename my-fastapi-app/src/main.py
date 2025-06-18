@@ -206,5 +206,11 @@ async def build_wallet_batch(
             detail=f"Failed to process wallet batch: {error_detail}"
         )
 
+
+from src.routers import chatbot
+
+app.include_router(chatbot.router, prefix="/chatbot", tags=["Chatbot"])
+
+
 if __name__ == "__main__":
-    uvicorn.run("src.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("src.main:app", host="0.0.0.0", port=8000, reload=False)
