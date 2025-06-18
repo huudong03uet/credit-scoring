@@ -10,3 +10,4 @@ asyncpg
 requests
 aiohttp
 neo4j
+openai

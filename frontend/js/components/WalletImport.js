@@ -382,6 +382,21 @@ export class WalletImport {  constructor() {
       console.log('Showing results...');
       this.showResults(result);
 
+      const walletAddress = document.getElementById('wallet-address')?.textContent || walletData.value;
+const scoringCompleteEvent = new CustomEvent('scoringComplete', {
+  detail: {
+    walletAddress: walletAddress,
+    scoreData: {
+      score: result.score || (result.creditScore ? result.creditScore.score : 720),
+      scoreLabel: result.scoreLabel || (result.creditScore ? 
+                  result.creditScore.scoreLabel : this.getScoreLabel(result.score || 720)),
+      explanation: result.explanation || (result.creditScore ? result.creditScore.explanation : '')
+    }
+  }
+});
+document.dispatchEvent(scoringCompleteEvent);
+console.log('🚀 Dispatched scoringComplete event');
+
     } catch (error) {
       console.error('Processing failed:', error);
       this.showError('Processing failed: ' + error.message + '. Please check that both API servers are running.');
@@ -458,6 +473,21 @@ export class WalletImport {  constructor() {
       if (data.creditScore && data.creditScore.status === 'success') {
         // Display credit score results
         this.creditScoreDisplay.displayCreditScoreResults(data.creditScore);
+        
+        // Dispatch event that scoring is complete to show chatbot
+        const walletAddress = data.walletAddress || document.getElementById('wallet-address')?.textContent;
+        const scoringCompleteEvent = new CustomEvent('scoringComplete', {
+          detail: {
+            walletAddress: walletAddress,
+            scoreData: {
+              score: data.creditScore.score,
+              scoreLabel: this.getScoreLabel(data.creditScore.score),
+              explanation: data.creditScore.explanation || ''
+            }
+          }
+        });
+        document.dispatchEvent(scoringCompleteEvent);
+        
       } else if (data.walletGraph) {
         // Display raw wallet graph data
         this.rawDataVisualizer.displayRawData(data.walletGraph);
@@ -469,6 +499,14 @@ export class WalletImport {  constructor() {
       console.error('Error displaying results:', error);
       this.showError('Failed to display results: ' + error.message);
     }
+  }
+
+  getScoreLabel(score) {
+    if (score >= 800) return 'Excellent';
+    if (score >= 740) return 'Very Good';
+    if (score >= 670) return 'Good';
+    if (score >= 580) return 'Fair';
+    return 'Poor';
   }
 
   showError(message) {

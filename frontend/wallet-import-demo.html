@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wallet Credit Score Demo</title>
+    <!-- Link CSS hiện tại -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Thêm link CSS cho Chatbot -->
+    <link rel="stylesheet" href="chatbot.css">
+    
     <style>
         body {
             padding: 20px;
@@ -148,14 +153,15 @@
         <div id="import-results" class="import-results" style="display: none;">
             <!-- Results will be populated here -->
     </div>    <script type="module">
-        import { WalletImport } from './js/components/WalletImport.js';
-        
-        // Initialize the wallet import component when DOM is ready
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('Initializing WalletImport component...');
-            const walletImport = new WalletImport();
-            console.log('WalletImport component initialized successfully');
-        });
-    </script>
+    import { WalletImport } from './js/components/WalletImport.js';
+    import './js/main.js'; // Import main.js để khởi tạo chatbot
+    
+    // Initialize the wallet import component when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('Initializing WalletImport component...');
+        const walletImport = new WalletImport();
+        console.log('WalletImport component initialized successfully');
+    });
+</script>
 </body>
 </html>
