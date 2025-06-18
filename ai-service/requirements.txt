@@ -19,3 +19,7 @@ Werkzeug==2.2.2
 wrapt==1.14.1
 yarl==1.20.1
 zstandard==0.23.0
+fastapi
+openai
+langchain-community
+neo4j
