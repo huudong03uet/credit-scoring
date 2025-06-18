@@ -16,6 +16,7 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     messages: List[Message]
 
+
 @router.post("/message/stream")
 async def chat_stream(payload: ChatRequest, graph: Any = None) -> StreamingResponse:
     if not payload.messages:
