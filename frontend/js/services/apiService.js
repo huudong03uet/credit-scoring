@@ -12,7 +12,7 @@ export async function fetchScore(address) {
   return res.json();
 }
 
-export async function fetchWalletGraph(walletAddress, limit = 20) {
+export async function fetchWalletGraph(walletAddress, limit = 50) {
   console.log(`2. Fetching wallet graph for address: ${walletAddress} with limit: ${limit}`);
   
   try {
