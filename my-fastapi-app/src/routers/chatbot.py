@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import Any, List, Literal
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -16,8 +16,9 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     messages: List[Message]
 
+
 @router.post("/message/stream")
-async def chat_stream(payload: ChatRequest):
+async def chat_stream(payload: ChatRequest, graph: Any = None) -> StreamingResponse:
     if not payload.messages:
         raise HTTPException(status_code=400, detail="messages must not be empty")
 
