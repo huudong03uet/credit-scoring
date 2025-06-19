@@ -194,6 +194,7 @@ export class Chatbot {
     
     // First show typing indicator
     element.innerHTML = '<span class="typing-indicator"><span>.</span><span>.</span><span>.</span></span>';
+    this.scrollToBottom();
     
     // Then type out the message
     setTimeout(() => {
@@ -202,9 +203,12 @@ export class Chatbot {
         if (i < content.length) {
           element.innerHTML += content.charAt(i);
           i++;
+          this.scrollToBottom(); // Cuộn sau mỗi ký tự
           setTimeout(typeChar, speed);
+        } else {
+          // Cuộn cuối cùng khi hoàn thành typing
+          this.scrollToBottom();
         }
-        this.scrollToBottom();
       };
       typeChar();
     }, 500);
@@ -235,7 +239,13 @@ export class Chatbot {
   }
   
   scrollToBottom() {
-    this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
+    // Sử dụng requestAnimationFrame để đảm bảo DOM đã được cập nhật
+    requestAnimationFrame(() => {
+      if (this.messagesEl) {
+        const chatBody = this.messagesEl.parentElement;
+        chatBody.scrollTop = chatBody.scrollHeight;
+      }
+    });
   }
   
   sendMessage() {
@@ -258,6 +268,7 @@ export class Chatbot {
     
     // Thêm chỉ báo typing
     bubble.innerHTML = '<span class="typing-indicator"><span>.</span><span>.</span><span>.</span></span>';
+    this.scrollToBottom();
     
     // Call API để lấy response
     this.callChatAPI(text, bubble);
@@ -316,11 +327,14 @@ export class Chatbot {
         
         // Cập nhật nội dung tin nhắn
         messageElement.innerHTML += chunk;
-        this.scrollToBottom();
+        this.scrollToBottom(); // Cuộn sau mỗi chunk
       }
       
       // Lưu tin nhắn của assistant vào mảng messages
       this.messages.push({ role: 'assistant', content: responseContent });
+      
+      // Cuộn cuối cùng sau khi hoàn thành
+      this.scrollToBottom();
       
       // Thêm suggestions sau khi trả lời xong
       if (this.messages.length < 4) {
@@ -351,6 +365,7 @@ export class Chatbot {
       });
       
       messageElement.appendChild(retryButton);
+      this.scrollToBottom();
     }
   }
   
@@ -373,13 +388,13 @@ export class Chatbot {
     // Xóa notification dot
     this.launcherEl.querySelector('.chatbot-notification-dot').style.display = 'none';
     
-    // Focus input
+    // Focus input và cuộn xuống dưới
     setTimeout(() => {
       this.inputEl.focus();
+      this.scrollToBottom();
     }, 300);
     
     this.adjustPosition();
-    this.scrollToBottom();
   }
   
   minimizeChatbot() {
@@ -393,7 +408,10 @@ export class Chatbot {
     this.boxEl.style.display = 'flex';
     
     this.adjustPosition();
-    this.scrollToBottom();
+    // Cuộn xuống dưới khi maximize
+    setTimeout(() => {
+      this.scrollToBottom();
+    }, 100);
   }
   
   closeChatbot() {

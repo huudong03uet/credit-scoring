@@ -1,30 +1,47 @@
 @import url('./chatbot.css');
 
 :root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8fafc;
-  --bg-card: #ffffff;
-  --text-primary: #1a202c;
-  --text-secondary: #4a5568;
-  --accent-blue: #3b82f6;
-  --accent-green: #22c55e;
-  --accent-red: #ef4444;
-  --accent-purple: #8b5cf6;
-  --border-color: #e2e8f0;
-  /*     #ef4444 0% 16.67%,    /* Very Poor: 300-400 */
-    /* #ff7a45 16.67% 33.33%, Poor: 400-500 */
-    /* #ffc107 33.33% 50%,    Fair: 500-600 */
-    /* #9254de 50% 66.67%,    Good: 600-700 */
-    /* #4f7df9 66.67% 83.33%, Very Good: 700-800 */
-    /* #22c55e 83.33% 100%    Excellent: 800-900 */ 
-  /* Score colors */
-  --very-poor: #ef4444;
-  --poor: #ff7a45;
-  --fair: #ffc107;
-  --good: #9254de;
-  --very-good: #4f7df9;
-  --excellent: #22c55e;
-  /* --exceptional: #52c41a; */
+  /* Backgrounds */
+  --bg-primary: #0a0a0a; /* Deep black for main background */
+  --bg-secondary: #1a1a2e; /* Darker purple-gray for secondary areas */
+  --bg-card: linear-gradient(
+    135deg,
+    rgba(26, 26, 46, 0.9) 0%,
+    rgba(10, 10, 20, 0.8) 100%
+  ); /* Glassmorphic card with subtle gradient */
+  
+  /* Text */
+  --text-primary: #e0e7ff; /* Bright off-white for primary text with a soft glow */
+  --text-secondary: rgba(147, 197, 253, 0.7); /* Muted cyan for secondary text */
+  
+  /* Accents */
+  --accent-blue: #00d4ff; /* Neon cyan for blue accents */
+  --accent-green: #00ff88; /* Vibrant neon green */
+  --accent-red: #ff0066; /* Hot neon pink for red */
+  --accent-purple: #8b5cf6; /* Retain purple but slightly brighter for Web3 vibe */
+  
+  /* Borders */
+  --border-color: rgba(0, 255, 255, 0.2); /* Subtle cyan glow for borders */
+  
+  /* Score colors with neon enhancement */
+  --very-poor: #ff0066; /* Neon pink for Very Poor (300-400) */
+  --poor: #ff4d4d; /* Slightly softer red-orange neon for Poor (400-500) */
+  --fair: #ffc107; /* Bright amber for Fair (500-600), kept for contrast */
+  --good: #b388ff; /* Neon lavender for Good (600-700) */
+  --very-good: #40c4ff; /* Neon sky blue for Very Good (700-800) */
+  --excellent: #00ff88; /* Neon green for Excellent (800-900) */
+}
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+  transition: transform 0.3s ease;
+}
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
 }
 
 * {
@@ -266,7 +283,7 @@ body {
 }
 
 .score-value {
-  font-size: 48px;
+  font-size: 90px;
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 20px;
@@ -1001,8 +1018,8 @@ body {
 }
 
 .score-circle {
-  width: 150px;
-  height: 150px;
+  width: 250px;
+  height: 250px;
   border-radius: 50%;
   border: 6px solid;
   display: flex;
@@ -1013,14 +1030,14 @@ body {
 }
 
 .score-value {
-  font-size: 36px;
+  font-size: 100px;
   font-weight: 700;
   margin-bottom: 4px;
 }
 
 .score-label {
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 30px;
   font-weight: 500;
 }
 
@@ -1031,12 +1048,11 @@ body {
 }
 
 .score-level {
-  font-size: 32px;
+  font-size: 60px;
   font-weight: 700;
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  background-color: white;
 }
 
 .score-level.excellent { color: var(--excellent); }
@@ -1048,7 +1064,7 @@ body {
 
 .score-range {
   color: var(--text-primary);
-  font-size: 18px;
+  font-size: 40px;
   font-weight: 600;
 }
 
@@ -2006,7 +2022,7 @@ body {
 }
 
 .score-value {
-  font-size: 32px;
+  font-size: 70px;
   font-weight: 700;
   color: var(--accent-blue);
 }

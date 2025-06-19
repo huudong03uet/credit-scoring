@@ -313,21 +313,58 @@ export class WalletImport {  constructor() {
     }
   }
 
-  async connectMetaMask() {
-    if (typeof window.ethereum === 'undefined') {
-      this.showError('MetaMask is not installed. Please install MetaMask to continue.');
-      return;
-    }
+async connectMetaMask() {
+  const processingContainer = document.getElementById('processing-container');
+  const processingStep = document.getElementById('processing-step');
+  const progressFill = document.getElementById('progress-fill');
 
-    try {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      if (accounts.length > 0) {
-        await this.processWallet({ type: 'metamask', value: accounts[0] });
-      }
-    } catch (error) {
-      this.showError('Failed to connect MetaMask: ' + error.message);
-    }
+  // Show processing container and set initial state
+  processingContainer.style.display = 'block';
+  processingStep.textContent = 'Initializing MetaMask connection...';
+  progressFill.style.width = '10%'; // Initial progress
+
+  if (typeof window.ethereum === 'undefined') {
+    this.showError('MetaMask is not installed. Please install MetaMask to continue.');
+    processingContainer.style.display = 'none';
+    return;
   }
+
+  try {
+    // Update UI before requesting accounts (non-blocking)
+    processingStep.textContent = 'Requesting MetaMask account access...';
+    progressFill.style.width = '40%';
+
+    // Fetch accounts (no added delays)
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+    if (accounts.length > 0) {
+      // Update UI before processing wallet
+      processingStep.textContent = 'Connected! Processing wallet data...';
+      progressFill.style.width = '70%';
+
+      // Process wallet data (assumed to be async)
+      await this.processWallet({ type: 'metamask', value: accounts[0] });
+
+      // Final UI update
+      processingStep.textContent = 'Wallet analysis complete!';
+      progressFill.style.width = '100%';
+
+      // Hide container after a brief display (non-blocking)
+      setTimeout(() => {
+        processingContainer.style.display = 'none';
+        progressFill.style.width = '0%'; // Reset progress
+      }, 1500);
+    } else {
+      this.showError('No accounts found in MetaMask.');
+      processingContainer.style.display = 'none';
+      progressFill.style.width = '0%';
+    }
+  } catch (error) {
+    this.showError('Failed to connect MetaMask: ' + error.message);
+    processingContainer.style.display = 'none';
+    progressFill.style.width = '0%';
+  }
+}
 
   async connectWalletConnect() {
     this.showError('WalletConnect integration coming soon!');
@@ -350,22 +387,22 @@ export class WalletImport {  constructor() {
       // Show real processing steps
       console.log('Step 1: Validating wallet address...');
       this.updateProcessingStep('Validating wallet address...', 10);
-      await this.delay(500);
+      await this.delay(1500);
       
       console.log('Step 2: Connecting to Credit Score API...');
       this.updateProcessingStep('Connecting to Credit Score API...', 25);
-      await this.delay(500);
+      await this.delay(1500);
       
       console.log('Step 3: Connecting to Wallet Graph API...');
       this.updateProcessingStep('Connecting to Wallet Graph API...', 40);
-      await this.delay(500);
+      await this.delay(1500);
       
       console.log('Step 4: Fetching transaction data...');
       this.updateProcessingStep('Fetching transaction data...', 60);
-      await this.delay(500);
+      await this.delay(1500);
         console.log('Step 5: Calculating credit score...');
       this.updateProcessingStep('Calculating credit score...', 80);
-      await this.delay(500);
+      await this.delay(1500);
       
       console.log('Step 6: Finalizing analysis...');
       this.updateProcessingStep('Finalizing analysis...', 95);

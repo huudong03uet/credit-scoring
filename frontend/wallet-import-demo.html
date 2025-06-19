@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wallet Credit Score Demo</title>
+    <title>BAAI Credit Score | Web3 Financial Analytics</title>
     <!-- Link CSS hiện tại -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -12,33 +12,273 @@
     <link rel="stylesheet" href="chatbot.css">
     
     <style>
+        /* Web3 Header Styles */
         body {
             padding: 20px;
-            background: var(--bg-primary);
+            background: #0a0a0a;
+            position: relative;
+            overflow-x: hidden;
         }
+
+        /* Animated Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(0, 255, 255, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 40% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 30%);
+            z-index: -1;
+            animation: backgroundPulse 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes backgroundPulse {
+            0% { opacity: 0.8; transform: scale(1); }
+            100% { opacity: 1; transform: scale(1.1); }
+        }
+
         .demo-container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
+            position: relative;
+            z-index: 1;
         }
+
         .demo-header {
             text-align: center;
-            margin-bottom: 40px;
-            color: var(--text-primary);
+            margin-bottom: 60px;
+            padding: 40px 20px;
+            position: relative;
+            overflow: hidden;
         }
+
+        /* Glowing particles effect */
+        .demo-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 30% 20%, rgba(0, 255, 255, 0.3) 1px, transparent 1px),
+                radial-gradient(circle at 70% 80%, rgba(255, 0, 255, 0.2) 1px, transparent 1px),
+                radial-gradient(circle at 20% 80%, rgba(139, 92, 246, 0.2) 1px, transparent 1px);
+            background-size: 50px 50px, 80px 80px, 60px 60px;
+            animation: particleFloat 20s linear infinite;
+            z-index: -1;
+        }
+
+        @keyframes particleFloat {
+            0% { transform: translateY(0) rotate(0deg); }
+            100% { transform: translateY(-20px) rotate(360deg); }
+        }
+
         .demo-header h1 {
-            font-size: 36px;
-            margin-bottom: 16px;
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 900;
+            margin-bottom: 24px;
+            position: relative;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: -2px;
+            
+            /* Gradient text with neon effect */
+            background: linear-gradient(135deg, 
+                #00ffff 0%,
+                #8b5cf6 25%,
+                #ff00ff 50%,
+                #00ff88 75%,
+                #0099ff 100%
+            );
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 4s ease-in-out infinite alternate;
+            
+            /* Multiple text shadows for glow effect */
+            filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.5))
+                    drop-shadow(0 0 40px rgba(139, 92, 246, 0.3))
+                    drop-shadow(0 0 60px rgba(255, 0, 255, 0.2));
         }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+
+        /* Floating glow orbs around title */
+        .demo-header h1::before,
+        .demo-header h1::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #00ffff, transparent);
+            box-shadow: 0 0 20px #00ffff;
+        }
+
+        .demo-header h1::before {
+            top: 10%;
+            left: -5%;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .demo-header h1::after {
+            bottom: 10%;
+            right: -5%;
+            background: radial-gradient(circle, #ff00ff, transparent);
+            box-shadow: 0 0 20px #ff00ff;
+            animation: float 3s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); opacity: 0.7; }
+            50% { transform: translateY(-20px) scale(1.2); opacity: 1; }
+        }
+
         .demo-header p {
-            color: var(--text-secondary);
-            font-size: 18px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+            line-height: 1.6;
+            max-width: 700px;
+            margin: 0 auto;
+            position: relative;
+            
+            /* Glass morphism effect */
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px 32px;
+            
+            /* Subtle glow */
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            
+            animation: slideUp 1s ease-out 0.5s both;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Cyber grid effect */
+        .demo-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ffff, transparent);
+            animation: gridPulse 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes gridPulse {
+            0% { 
+                width: 200px; 
+                box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); 
+            }
+            100% { 
+                width: 400px; 
+                box-shadow: 0 0 20px rgba(0, 255, 255, 0.8); 
+            }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .demo-header {
+                margin-bottom: 40px;
+                padding: 30px 15px;
+            }
+            
+            .demo-header p {
+                font-size: 1.1rem;
+                padding: 20px 24px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .demo-header h1 {
+                letter-spacing: -1px;
+            }
+            
+            .demo-header p {
+                padding: 16px 20px;
+                font-size: 1rem;
+            }
+        }
+
+        /* Enhanced cyber elements */
+        .cyber-accent {
+            position: relative;
+            display: inline-block;
+        }
+
+        .cyber-accent::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #00ffff, #ff00ff, #00ffff);
+            background-size: 200% 200%;
+            border-radius: inherit;
+            z-index: -1;
+            animation: borderGlow 3s linear infinite;
+        }
+
+        @keyframes borderGlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Loading animation for the entire header */
+        .demo-header {
+            animation: headerReveal 2s ease-out;
+        }
+
+        @keyframes headerReveal {
+            0% {
+                opacity: 0;
+                transform: scale(0.9);
+                filter: blur(10px);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.02);
+                filter: blur(5px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+                filter: blur(0);
+            }
         }
     </style>
 </head>
 <body>
-    <div class="demo-container">        <div class="demo-header">
-            <h1><span style="color: var(--accent-blue);"></span> BAAI Credit Score</h1>
-            <p>An AI platform that scores crypto wallet creditworthiness and transparently explains its metrics.</p>
+    <div class="demo-container">        
+        <div class="demo-header">
+            <h1>BAAI Credit Score</h1>
+            <p>Advanced AI-powered Web3 financial analytics platform with transparent credit scoring and real-time blockchain data analysis.</p>
         </div>
 
         <!-- Wallet Import Section -->
@@ -154,13 +394,12 @@
             <!-- Results will be populated here -->
     </div>    <script type="module">
     import { WalletImport } from './js/components/WalletImport.js';
-    import './js/main.js'; // Import main.js để khởi tạo chatbot
+    import './js/main.js';
     
-    // Initialize the wallet import component when DOM is ready
     document.addEventListener('DOMContentLoaded', () => {
-        console.log('Initializing WalletImport component...');
+        console.log('🚀 Initializing BAAI Credit Score Platform...');
         const walletImport = new WalletImport();
-        console.log('WalletImport component initialized successfully');
+        console.log('✅ Platform initialized successfully');
     });
 </script>
 </body>
