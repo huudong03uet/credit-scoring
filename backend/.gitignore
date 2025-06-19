@@ -65,3 +65,6 @@ celerybeat-schedule
 
 # Ignore __pypackages__ (PEP 582)
 __pypackages__/
+
+.env
+.venv
